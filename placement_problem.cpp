@@ -4,6 +4,8 @@
 
 #include <cassert>
 #include <iostream>
+#include <limits>
+#include <algorithm>
 
 bool placement_problem::is_feasible() const{
     bool maybe = x_flow.is_bounded() and y_flow.is_bounded();
@@ -70,8 +72,11 @@ std::vector<placement_problem> placement_problem::branch() const{
     std::cout << std::endl;
     */
 
+    int best_fc, best_sc;
+    int best_overlap=0;
     bool found_overlap = false;
-    int best_fc, best_sc, best_overlap_cost=0;
+    //int best_max_cost=std::numeric_limits<int>::max();
+    //int best_diff = 0;
 
     // Branch to avoid overlaps
     for(int i=0; i+1<cells.size(); ++i){
@@ -79,12 +84,41 @@ std::vector<placement_problem> placement_problem::branch() const{
             rect fc(pos[i].x, pos[i].y, pos[i].x+cells[i].width, pos[i].y+cells[i].height),
                  sc(pos[j].x, pos[j].y, pos[j].x+cells[j].width, pos[j].y+cells[j].height);
             // Now how much area is shared
-            if(rect::intersection(fc, sc).get_area() > best_overlap_cost){
+            
+            if(rect::intersection(fc, sc).get_area() > best_overlap){
                 found_overlap = true;
-                best_overlap_cost = rect::intersection(fc, sc).get_area();
-                //std::cout << "Found better overlap: " << best_overlap_cost << std::endl;
                 best_fc = i; best_sc = j;
+                best_overlap = rect::intersection(fc, sc).get_area();
             }
+            
+            /*
+            if(rect::intersection(fc, sc).get_area() > 0){
+                auto rgt_flow = x_flow; rgt_flow.add_edge(i+1, j+1, -cells[j].width);
+                auto lft_flow = x_flow; lft_flow.add_edge(j+1, i+1, -cells[i].width);
+                auto upp_flow = y_flow; upp_flow.add_edge(i+1, j+1, -cells[j].height);
+                auto dow_flow = y_flow; dow_flow.add_edge(j+1, i+1, -cells[i].height);
+                int rgt_diff = rgt_flow.get_cost() - x_flow.get_cost(),
+                    lft_diff = lft_flow.get_cost() - x_flow.get_cost(),
+                    upp_diff = upp_flow.get_cost() - y_flow.get_cost(),
+                    dow_diff = dow_flow.get_cost() - y_flow.get_cost();
+                int max_diff = rgt_diff;
+                max_diff = std::max(max_diff, lft_diff);
+                max_diff = std::max(max_diff, upp_diff);
+                max_diff = std::max(max_diff, dow_diff);
+                int min_diff = rgt_diff;
+                min_diff = std::min(min_diff, lft_diff);
+                min_diff = std::min(min_diff, upp_diff);
+                min_diff = std::min(min_diff, dow_diff);
+                //if(max_cost < best_max_cost){
+                if(not found_overlap or min_diff > best_diff){
+                    //std::cout << "Found better overlap: " << best_overlap_cost << std::endl;
+                    best_fc = i; best_sc = j;
+                    //best_max_cost = max_cost;
+                    best_diff = min_diff;
+                }
+                found_overlap = true;
+            }
+            */
         }
     }
 
@@ -99,7 +133,13 @@ std::vector<placement_problem> placement_problem::branch() const{
         auto lft_problem = *this; lft_problem.x_flow.add_edge(best_sc+1, best_fc+1, -cells[best_fc].width);
         auto upp_problem = *this; upp_problem.y_flow.add_edge(best_fc+1, best_sc+1, -cells[best_sc].height);
         auto dow_problem = *this; dow_problem.y_flow.add_edge(best_sc+1, best_fc+1, -cells[best_fc].height);
-        return std::vector<placement_problem>({rgt_problem, lft_problem, upp_problem, dow_problem});
+        upp_problem.x_flow.add_edge(best_fc+1, best_sc+1, cells[best_sc].width+1);
+        dow_problem.x_flow.add_edge(best_fc+1, best_sc+1, cells[best_sc].width+1);
+        upp_problem.x_flow.add_edge(best_sc+1, best_fc+1, cells[best_fc].width+1);
+        dow_problem.x_flow.add_edge(best_sc+1, best_fc+1, cells[best_fc].width+1);
+        auto ret = std::vector<placement_problem>({rgt_problem, lft_problem, upp_problem, dow_problem});
+        std::sort(ret.begin(), ret.end(), [](placement_problem const a, placement_problem const b){ return a.get_cost() < b.get_cost(); });
+        return ret;
     }
     
 
