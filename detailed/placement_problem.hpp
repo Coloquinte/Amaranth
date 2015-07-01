@@ -8,12 +8,15 @@ struct point{
 
 struct cell{
     int width, height;
-    int x_pitch, y_pitch
-    dim(int w, int r) : widths(w), rows(r) {}
+    int x_pitch, y_pitch;
+    cell(int w, int h, int xp, int yp) : width(w), height(h), x_pitch(xp), y_pitch(yp) {}
 };
 struct rect{
     int xmin, ymin, xmax, ymax;
-    dim(int xmn, int ymn, int xmx, int ymx) : xmin(xmn), ymin(ymn), xmax(xmx), ymax(ymx) {}
+    rect(int xmn, int ymn, int xmx, int ymx) : xmin(xmn), ymin(ymn), xmax(xmx), ymax(ymx) {}
+
+    static rect intersection(rect a, rect b){ return rect(std::max(a.xmin, b.xmin), std::max(a.ymin, b.ymin), std::min(a.xmax, b.xmax), std::min(a.ymax, b.ymax)); }
+    int get_area() const { return std::max(0, xmax-xmin) * std::max(0, ymax-ymin); }
 };
 
 struct pin : rect{
@@ -38,15 +41,15 @@ class placement_problem{
     int cell_count() const{ return cells.size(); }
     int net_count() const{ return nets.size(); }
 
-    bool maybe_feasible() const;
-    bool feasible() const;
+    bool is_feasible() const;
+    bool is_correct() const;
     int get_cost() const;
 
     void tighten();
     std::vector<point> get_positions() const;
     std::vector<placement_problem> branch() const;
 
-    placement_problem(std::vector<cell> icells, std::vector<net> inets);
+    placement_problem(rect bounding_box, std::vector<cell> icells, std::vector<std::vector<pin> > inets, std::vector<rect> fixed=std::vector<rect>());
 };
 
 

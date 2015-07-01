@@ -19,12 +19,24 @@ class MCF_graph{
     bool bounded;
 
     private:
-    // Get a path to send flow; uses Dijkstra instead of Bellman-Ford (careful use of potentials)
-    void update_potential();
+    struct node_elt{
+        int cost;
+        int incoming_edge;
+    
+        node_elt(int c, int i) : cost(c), incoming_edge(i) {}
+    };
+    
+    struct queue_elt : node_elt{
+        int destination_node;
+    
+        queue_elt(int d, int c, int i) : node_elt(c, i), destination_node(d) {}
+    };
+
+    std::vector<node_elt> get_Bellman_Ford(int source_node) const;
 
     public:
     // Create a graph from an OPTIMAL flow (later maybe add cycle cancelling)
-    MCF_graph(int node_cnt, std::vector<edge> edges);
+    MCF_graph(int node_cnt=0, std::vector<edge> edges=std::vector<edge>());
 
     // Add a new edge and get a new optimal flow and potentials for the node; uses Dijkstra instead of Bellman-Ford
     void add_edge(int source, int dest, int cost);
@@ -33,5 +45,7 @@ class MCF_graph{
     int get_cost() const{ return cost; }
     bool is_bounded() const{ return bounded; }
     int node_count() const{ return adjacent_edges.size(); }
+
+    void print() const;
 };
 

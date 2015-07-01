@@ -1,6 +1,6 @@
 
 
-#include "detailed/placement_problem.cpp"
+#include "detailed/placement_problem.hpp"
 
 // Use of modulos: careful with negative numbers
 int round_lower(int pos, int pitch){
@@ -18,10 +18,10 @@ void placement_problem::tighten(){
     // Tighten based on the pitches for the cells
     for(int i=0; i<cells.size(); ++i){
         rect & cur = position_constraints[i];
-        cur.x_min = round_upper(cur.x_min, cells[i].x_pitch);
-        cur.x_max = round_lower(cur.x_max, cells[i].x_pitch);
-        cur.y_min = round_upper(cur.y_min, cells[i].y_pitch);
-        cur.y_max = round_lower(cur.y_max, cells[i].y_pitch);
+        cur.xmin = round_upper(cur.xmin, cells[i].x_pitch);
+        cur.xmax = round_lower(cur.xmax, cells[i].x_pitch);
+        cur.ymin = round_upper(cur.ymin, cells[i].y_pitch);
+        cur.ymax = round_lower(cur.ymax, cells[i].y_pitch);
     }
 
     // Tighten based on the other cells
