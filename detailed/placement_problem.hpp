@@ -25,17 +25,34 @@ struct pin : rect{
 };
 
 class placement_problem{
+    public:
+    struct relative_constraint{
+        int fc, sc; // The indexes for the two cells
+        int min_dist; // Left corner to left corner
+        relative_constraint(int fst, int snd, int dist) : fc(fst), sc(snd), min_dist(dist) {}
+    };
+
+    private:
     MCF_graph x_flow, y_flow; // Flows with 1 fixed node, cell_count() cell nodes and 2*net_count() net nodes, in that order
 
     std::vector<cell> cells;
     std::vector<std::vector<pin> > nets;
+    std::vector<rect> fixed_elts;
 
     std::vector<rect> position_constraints;
-    //std::vector<std::vector<biconstraint> > cell_constraints;
-    //std::vector<std::pair<int, int> > row_limits;
+    std::vector<relative_constraint> x_constraints, y_constraints;
 
-    bool feasible;
-    bool correct;
+    // To use
+    //bool feasible;
+    //bool correct;
+
+    void add_x_constraint(int fc, int sc, int min_dist);
+    void add_y_constraint(int fc, int sc, int min_dist);
+
+    std::vector<placement_problem> branch_overlap_removal(int c1, int c2) const;
+    std::vector<placement_problem> branch_pitch(int c) const;
+
+    void tighten();
 
     public:
     int cell_count() const{ return cells.size(); }
@@ -45,7 +62,6 @@ class placement_problem{
     bool is_correct() const;
     int get_cost() const;
 
-    void tighten();
     std::vector<point> get_positions() const;
     std::vector<placement_problem> branch() const;
 

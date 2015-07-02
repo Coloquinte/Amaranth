@@ -7,6 +7,32 @@
 #include <limits>
 #include <algorithm>
 
+void placement_problem::add_x_constraint(int fc, int sc, int min_dist){
+    assert(fc >= 0 and fc < cell_count()); assert(sc >= 0 and sc < cell_count());
+    relative_constraint constraint(fc, sc, min_dist);
+    x_constraints.push_back(constraint);
+    x_flow.add_edge(sc+1, fc+1, -min_dist);
+}
+void placement_problem::add_y_constraint(int fc, int sc, int min_dist){
+    relative_constraint constraint(fc, sc, min_dist);
+    y_constraints.push_back(constraint);
+    y_flow.add_edge(sc+1, fc+1, -min_dist);
+}
+
+std::vector<placement_problem> placement_problem::branch_overlap_removal(int c1, int c2) const{
+    auto rgt_problem = *this; rgt_problem.add_x_constraint(c1, c2, cells[c1].width);
+    auto lft_problem = *this; lft_problem.add_x_constraint(c2, c1, cells[c2].width);
+    auto upp_problem = *this; upp_problem.add_y_constraint(c1, c2, cells[c1].height);
+    auto dow_problem = *this; dow_problem.add_y_constraint(c2, c1, cells[c2].height);
+    //upp_problem.x_flow.add_edge(best_fc+1, best_sc+1, cells[best_sc].width+1);
+    //dow_problem.x_flow.add_edge(best_fc+1, best_sc+1, cells[best_sc].width+1);
+    //upp_problem.x_flow.add_edge(best_sc+1, best_fc+1, cells[best_fc].width+1);
+    //dow_problem.x_flow.add_edge(best_sc+1, best_fc+1, cells[best_fc].width+1);
+    auto ret = std::vector<placement_problem>({rgt_problem, lft_problem, upp_problem, dow_problem});
+    std::sort(ret.begin(), ret.end(), [](placement_problem const a, placement_problem const b){ return a.get_cost() < b.get_cost(); });
+    return ret;
+}
+
 bool placement_problem::is_feasible() const{
     bool maybe = x_flow.is_bounded() and y_flow.is_bounded();
     for(rect const R : position_constraints){
@@ -76,7 +102,7 @@ std::vector<placement_problem> placement_problem::branch() const{
     int best_overlap=0;
     bool found_overlap = false;
     //int best_max_cost=std::numeric_limits<int>::max();
-    //int best_diff = 0;
+    //int best_diff = 0; // std::numeric_limits<int>::max();
 
     // Branch to avoid overlaps
     for(int i=0; i+1<cells.size(); ++i){
@@ -109,12 +135,15 @@ std::vector<placement_problem> placement_problem::branch() const{
                 min_diff = std::min(min_diff, lft_diff);
                 min_diff = std::min(min_diff, upp_diff);
                 min_diff = std::min(min_diff, dow_diff);
+
+                int cur_diff = std::sqrt(rect::intersection(fc, sc).get_area());
+
                 //if(max_cost < best_max_cost){
-                if(not found_overlap or min_diff > best_diff){
+                if(not found_overlap or cur_diff > best_diff){
                     //std::cout << "Found better overlap: " << best_overlap_cost << std::endl;
                     best_fc = i; best_sc = j;
                     //best_max_cost = max_cost;
-                    best_diff = min_diff;
+                    best_diff = cur_diff;
                 }
                 found_overlap = true;
             }
@@ -128,18 +157,7 @@ std::vector<placement_problem> placement_problem::branch() const{
         return std::vector<placement_problem>();
     }
     else{
-        //std::cout << "Branching on " << best_fc << " and " << best_sc << std::endl;
-        auto rgt_problem = *this; rgt_problem.x_flow.add_edge(best_fc+1, best_sc+1, -cells[best_sc].width);
-        auto lft_problem = *this; lft_problem.x_flow.add_edge(best_sc+1, best_fc+1, -cells[best_fc].width);
-        auto upp_problem = *this; upp_problem.y_flow.add_edge(best_fc+1, best_sc+1, -cells[best_sc].height);
-        auto dow_problem = *this; dow_problem.y_flow.add_edge(best_sc+1, best_fc+1, -cells[best_fc].height);
-        upp_problem.x_flow.add_edge(best_fc+1, best_sc+1, cells[best_sc].width+1);
-        dow_problem.x_flow.add_edge(best_fc+1, best_sc+1, cells[best_sc].width+1);
-        upp_problem.x_flow.add_edge(best_sc+1, best_fc+1, cells[best_fc].width+1);
-        dow_problem.x_flow.add_edge(best_sc+1, best_fc+1, cells[best_fc].width+1);
-        auto ret = std::vector<placement_problem>({rgt_problem, lft_problem, upp_problem, dow_problem});
-        std::sort(ret.begin(), ret.end(), [](placement_problem const a, placement_problem const b){ return a.get_cost() < b.get_cost(); });
-        return ret;
+        return branch_overlap_removal(best_fc, best_sc);
     }
     
 
