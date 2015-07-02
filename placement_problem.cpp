@@ -19,17 +19,39 @@ void placement_problem::add_y_constraint(int fc, int sc, int min_dist){
     y_flow.add_edge(sc+1, fc+1, -min_dist);
 }
 
+void placement_problem::apply_constraint(generic_constraint constraint){
+    if(constraint.direction)
+        add_y_constraint(constraint.fc, constraint.sc, constraint.min_dist);
+    else
+        add_x_constraint(constraint.fc, constraint.sc, constraint.min_dist);
+}
+
 std::vector<placement_problem> placement_problem::branch_overlap_removal(int c1, int c2) const{
-    auto rgt_problem = *this; rgt_problem.add_x_constraint(c1, c2, cells[c1].width);
-    auto lft_problem = *this; lft_problem.add_x_constraint(c2, c1, cells[c2].width);
-    auto upp_problem = *this; upp_problem.add_y_constraint(c1, c2, cells[c1].height);
-    auto dow_problem = *this; dow_problem.add_y_constraint(c2, c1, cells[c2].height);
-    //upp_problem.x_flow.add_edge(best_fc+1, best_sc+1, cells[best_sc].width+1);
-    //dow_problem.x_flow.add_edge(best_fc+1, best_sc+1, cells[best_sc].width+1);
-    //upp_problem.x_flow.add_edge(best_sc+1, best_fc+1, cells[best_fc].width+1);
-    //dow_problem.x_flow.add_edge(best_sc+1, best_fc+1, cells[best_fc].width+1);
-    auto ret = std::vector<placement_problem>({rgt_problem, lft_problem, upp_problem, dow_problem});
-    std::sort(ret.begin(), ret.end(), [](placement_problem const a, placement_problem const b){ return a.get_cost() < b.get_cost(); });
+    typedef std::pair<generic_constraint, generic_constraint> cpair;
+    typedef std::pair<placement_problem, generic_constraint> ppair;
+
+    // A constraint satisfied in the branch, and another one to constrain the other sides further
+    std::vector<cpair> constraint_pairs({
+        {generic_constraint(false, c1, c2, cells[c1].width ), generic_constraint(false, c2, c1, -cells[c1].width  + 1)},
+        {generic_constraint(false, c2, c1, cells[c2].width ), generic_constraint(false, c1, c2, -cells[c2].width  + 1)},
+        {generic_constraint(true , c1, c2, cells[c1].height), generic_constraint(true , c2, c1, -cells[c1].height + 1)},
+        {generic_constraint(true , c2, c1, cells[c2].height), generic_constraint(true , c1, c2, -cells[c2].height + 1)}
+    });
+    std::vector<ppair> probs;
+    for(cpair cur : constraint_pairs){
+        probs.push_back(ppair(*this, cur.second));
+        probs.back().first.apply_constraint(cur.first);
+    }
+    std::sort(probs.begin(), probs.end(), [](ppair const & a, ppair const & b){ return a.first.get_cost() < b.first.get_cost(); });
+    for(int i=0; i+1<probs.size(); ++i){
+        for(int j=i+1; j<probs.size(); ++j){
+            probs[j].first.apply_constraint(probs[i].second);
+        }
+    }
+    std::vector<placement_problem> ret;
+    for(auto const & cur : probs){
+        ret.push_back(cur.first);
+    }
     return ret;
 }
 

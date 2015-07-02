@@ -31,6 +31,10 @@ class placement_problem{
         int min_dist; // Left corner to left corner
         relative_constraint(int fst, int snd, int dist) : fc(fst), sc(snd), min_dist(dist) {}
     };
+    struct generic_constraint : relative_constraint{
+        bool direction;
+        generic_constraint(bool dir, int fst, int snd, int dist) : relative_constraint(fst, snd, dist), direction(dir) {}
+    };
 
     private:
     MCF_graph x_flow, y_flow; // Flows with 1 fixed node, cell_count() cell nodes and 2*net_count() net nodes, in that order
@@ -48,6 +52,7 @@ class placement_problem{
 
     void add_x_constraint(int fc, int sc, int min_dist);
     void add_y_constraint(int fc, int sc, int min_dist);
+    void apply_constraint(generic_constraint constraint);
 
     std::vector<placement_problem> branch_overlap_removal(int c1, int c2) const;
     std::vector<placement_problem> branch_pitch(int c) const;
