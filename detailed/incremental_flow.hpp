@@ -13,8 +13,8 @@ class MCF_graph{
 
     public:
     std::vector<edge> edges;
-    std::vector<std::vector<int> > adjacent_edges;
 
+    int nb_nodes;
     int cost;
     bool bounded;
 
@@ -44,7 +44,7 @@ class MCF_graph{
     std::vector<int> get_potentials() const;
     int get_cost() const{ return cost; }
     bool is_bounded() const{ return bounded; }
-    int node_count() const{ return adjacent_edges.size(); }
+    int node_count() const{ return nb_nodes; }
 
     void print() const;
 };

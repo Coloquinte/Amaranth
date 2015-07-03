@@ -54,6 +54,22 @@ void MCF_graph::add_edge(int esource, int edestination, int ecost){
     int sent_flow=0;
 
     //std::cout << "Creating an edge (" << esource << ", " << edestination << "), cost " << ecost << std::endl;
+    for(auto it = edges.begin(); it != edges.end(); ){
+        if(it->source == esource and it->dest == edestination){
+            if(it->cost > ecost){
+                sent_flow += it->flow;
+                cost -= it->flow * (it->cost - ecost);
+                it = edges.erase(it);
+            }
+            else{
+                assert(sent_flow == 0);
+                return;
+            }
+        }
+        else{
+            ++it;
+        }
+    }
 
     bool maybe_cycle = bounded;
     while(maybe_cycle){
@@ -101,19 +117,15 @@ void MCF_graph::add_edge(int esource, int edestination, int ecost){
             maybe_cycle = false;
         }
     }
+
  
-    int ind = edges.size();
-    edges.push_back(edge(esource, edestination, ecost, sent_flow));
-    adjacent_edges[esource     ].push_back(ind);
-    adjacent_edges[edestination].push_back(ind);
+    edges.emplace_back(esource, edestination, ecost, sent_flow);
 }
 
-MCF_graph::MCF_graph(int node_cnt, std::vector<MCF_graph::edge> edge_list) : edges(edge_list), adjacent_edges(node_cnt), bounded(true), cost(0){
+MCF_graph::MCF_graph(int node_cnt, std::vector<MCF_graph::edge> edge_list) : edges(edge_list), nb_nodes(node_cnt), bounded(true), cost(0){
     for(int e=0; e<edges.size(); ++e){
         edge cur = edges[e];
         assert(cur.source < node_count() and cur.dest < node_count());
-        adjacent_edges[cur.source].push_back(e);
-        adjacent_edges[cur.dest  ].push_back(e);
     }
 }
 
