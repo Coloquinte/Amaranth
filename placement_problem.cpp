@@ -7,42 +7,37 @@
 #include <limits>
 #include <algorithm>
 
-void placement_problem::add_x_constraint(int fc, int sc, int min_dist){
-    assert(fc >= 0 and fc < cell_count()); assert(sc >= 0 and sc < cell_count());
-    relative_constraint constraint(fc, sc, min_dist);
-    x_constraints.push_back(constraint);
-    x_flow.add_edge(sc+1, fc+1, -min_dist);
-}
-void placement_problem::add_y_constraint(int fc, int sc, int min_dist){
-    relative_constraint constraint(fc, sc, min_dist);
-    y_constraints.push_back(constraint);
-    y_flow.add_edge(sc+1, fc+1, -min_dist);
+bool placement_problem::operator<(placement_problem const & o) const{
+    if(is_feasible() and o.is_feasible()) return get_cost() < o.get_cost();
+    else return (not is_feasible()) and o.is_feasible(); // Unfeasible first
 }
 
 void placement_problem::apply_constraint(generic_constraint constraint){
-    if(constraint.direction)
-        add_y_constraint(constraint.fc, constraint.sc, constraint.min_dist);
-    else
-        add_x_constraint(constraint.fc, constraint.sc, constraint.min_dist);
+    assert(constraint.fc < cell_count() and constraint.sc < cell_count());
+    assert(constraint.fc >= -1 and constraint.sc >= -1);
+    if(constraint.direction){
+        if(constraint.fc >= 0 and constraint.sc >= 0)
+            y_constraints.push_back(constraint);
+        y_flow.add_edge(constraint.sc+1, constraint.fc+1, -constraint.min_dist);
+    }
+    else{
+        if(constraint.fc >= 0 and constraint.sc >= 0)
+            x_constraints.push_back(constraint);
+        x_flow.add_edge(constraint.sc+1, constraint.fc+1, -constraint.min_dist);
+    }
 }
 
-std::vector<placement_problem> placement_problem::branch_overlap_removal(int c1, int c2) const{
-    typedef std::pair<generic_constraint, generic_constraint> cpair;
-    typedef std::pair<placement_problem, generic_constraint> ppair;
+std::vector<placement_problem> placement_problem::branch_on_constraints(std::vector<generic_constraint> constraints) const{
+    typedef std::pair<placement_problem::generic_constraint, placement_problem::generic_constraint> cpair;
+    typedef std::pair<placement_problem, placement_problem::generic_constraint> ppair;
 
-    // A constraint satisfied in the branch, and another one to constrain the other sides further
-    std::vector<cpair> constraint_pairs({
-        {generic_constraint(false, c1, c2, cells[c1].width ), generic_constraint(false, c2, c1, -cells[c1].width  + 1)},
-        {generic_constraint(false, c2, c1, cells[c2].width ), generic_constraint(false, c1, c2, -cells[c2].width  + 1)},
-        {generic_constraint(true , c1, c2, cells[c1].height), generic_constraint(true , c2, c1, -cells[c1].height + 1)},
-        {generic_constraint(true , c2, c1, cells[c2].height), generic_constraint(true , c1, c2, -cells[c2].height + 1)}
-    });
     std::vector<ppair> probs;
-    for(cpair cur : constraint_pairs){
-        probs.push_back(ppair(*this, cur.second));
-        probs.back().first.apply_constraint(cur.first);
+    for(generic_constraint cur : constraints){
+        generic_constraint opposite(cur.direction, cur.sc, cur.fc, -cur.min_dist+1);
+        probs.push_back(ppair(*this, opposite));
+        probs.back().first.apply_constraint(cur);
     }
-    std::sort(probs.begin(), probs.end(), [](ppair const & a, ppair const & b){ return a.first.get_cost() < b.first.get_cost(); });
+    std::sort(probs.begin(), probs.end(), [](ppair const & a, ppair const & b) { return a.first < b.first; });
     for(int i=0; i+1<probs.size(); ++i){
         for(int j=i+1; j<probs.size(); ++j){
             probs[j].first.apply_constraint(probs[i].second);
@@ -53,6 +48,31 @@ std::vector<placement_problem> placement_problem::branch_overlap_removal(int c1,
         ret.push_back(cur.first);
     }
     return ret;
+}
+
+
+std::vector<placement_problem> placement_problem::branch_overlap_removal(int c1, int c2) const{
+
+    // A constraint satisfied in the branch, and another one to constrain the other sides further
+    std::vector<generic_constraint> constraints({
+        generic_constraint(false, c1, c2, cells[c1].width ),
+        generic_constraint(false, c2, c1, cells[c2].width ),
+        generic_constraint(true , c1, c2, cells[c1].height),
+        generic_constraint(true , c2, c1, cells[c2].height)
+    });
+    return branch_on_constraints(constraints);
+}
+
+std::vector<placement_problem> placement_problem::branch_overlap_removal(int c1, rect fixed) const{
+
+    // A constraint satisfied in the branch, and another one to constrain the other sides further
+    std::vector<generic_constraint> constraints({
+        generic_constraint(false, c1, -1, cells[c1].width  - fixed.xmax),
+        generic_constraint(false, -1, c1, fixed.xmin                   ),
+        generic_constraint(true , c1, -1, cells[c1].height - fixed.ymax),
+        generic_constraint(true , -1, c1, fixed.ymin                   )
+    });
+    return branch_on_constraints(constraints);
 }
 
 bool placement_problem::is_feasible() const{
@@ -72,12 +92,21 @@ bool placement_problem::is_correct() const{
         if(pos[i].y % cells[i].y_pitch != 0) return false;
     }
     */
-    for(int i=0; i<cells.size(); ++i){
+    /*for(int i=0; i<cells.size(); ++i){
         rect const & cur = position_constraints[i];
         if(cur.xmin > cur.xmax or cur.xmin > pos[i].x or cur.xmax < pos[i].x) return false;
         if(cur.ymin > cur.ymax or cur.ymin > pos[i].y or cur.ymax < pos[i].y) return false;
-    }
+    }*/
+    if(not is_feasible()) return false;
 
+    for(rect const R : fixed_elts){
+        for(int i=0; i<cells.size(); ++i){
+            if(pos[i].x + cells[i].width  > R.xmin
+           and pos[i].y + cells[i].height > R.xmax
+           and R.xmax  > pos[i].x
+           and R.ymax  > pos[i].y) return false;
+        }
+    }
     
     // TODO: Should use a line sweep to verify that there is no overlap
     for(int i=0; i+1<cells.size(); ++i){
@@ -145,89 +174,49 @@ std::vector<point> placement_problem::get_positions() const{
 std::vector<placement_problem> placement_problem::branch() const{
     // Chose a good branch based simply on the positions of the cells
     std::vector<point> pos = get_positions();
-    /*
-    std::cout << "X positions: ";
-    for(point p : pos)
-        std::cout << p.x << " ";
-    std::cout << std::endl;
-    std::cout << "Y positions: ";
-    for(point p : pos)
-        std::cout << p.y << " ";
-    std::cout << std::endl;
-    */
 
     int best_fc, best_sc;
-    int best_overlap=0;
-    bool found_overlap = false;
-    //int best_max_cost=std::numeric_limits<int>::max();
-    //int best_diff = 0; // std::numeric_limits<int>::max();
+    int best_cell_overlap=0;
 
-    // Branch to avoid overlaps
+    // Branch to avoid overlaps between cells
     for(int i=0; i+1<cells.size(); ++i){
         for(int j=i+1; j<cells.size(); ++j){
             rect fc(pos[i].x, pos[i].y, pos[i].x+cells[i].width, pos[i].y+cells[i].height),
                  sc(pos[j].x, pos[j].y, pos[j].x+cells[j].width, pos[j].y+cells[j].height);
+            
             // Now how much area is shared
-            
-            if(rect::intersection(fc, sc).get_area() > best_overlap){
-                found_overlap = true;
+            if(rect::intersection(fc, sc).get_area() > best_cell_overlap){
                 best_fc = i; best_sc = j;
-                best_overlap = rect::intersection(fc, sc).get_area();
+                best_cell_overlap = rect::intersection(fc, sc).get_area();
             }
-            
-            /*
-            if(rect::intersection(fc, sc).get_area() > 0){
-                auto rgt_flow = x_flow; rgt_flow.add_edge(i+1, j+1, -cells[j].width);
-                auto lft_flow = x_flow; lft_flow.add_edge(j+1, i+1, -cells[i].width);
-                auto upp_flow = y_flow; upp_flow.add_edge(i+1, j+1, -cells[j].height);
-                auto dow_flow = y_flow; dow_flow.add_edge(j+1, i+1, -cells[i].height);
-                int rgt_diff = rgt_flow.get_cost() - x_flow.get_cost(),
-                    lft_diff = lft_flow.get_cost() - x_flow.get_cost(),
-                    upp_diff = upp_flow.get_cost() - y_flow.get_cost(),
-                    dow_diff = dow_flow.get_cost() - y_flow.get_cost();
-                int max_diff = rgt_diff;
-                max_diff = std::max(max_diff, lft_diff);
-                max_diff = std::max(max_diff, upp_diff);
-                max_diff = std::max(max_diff, dow_diff);
-                int min_diff = rgt_diff;
-                min_diff = std::min(min_diff, lft_diff);
-                min_diff = std::min(min_diff, upp_diff);
-                min_diff = std::min(min_diff, dow_diff);
-
-                int cur_diff = std::sqrt(rect::intersection(fc, sc).get_area());
-
-                //if(max_cost < best_max_cost){
-                if(not found_overlap or cur_diff > best_diff){
-                    //std::cout << "Found better overlap: " << best_overlap_cost << std::endl;
-                    best_fc = i; best_sc = j;
-                    //best_max_cost = max_cost;
-                    best_diff = cur_diff;
-                }
-                found_overlap = true;
-            }
-            */
         }
     }
 
-    if(not found_overlap){
-        //std::cout << "The solution was correct!" << std::endl;
+    rect best_fixed;
+    int best_fixed_c;
+    int best_fixed_overlap=0;
+
+    for(rect const R : fixed_elts){
+        for(int i=0; i<cells.size(); ++i){
+            rect crect(pos[i].x, pos[i].y, pos[i].x+cells[i].width, pos[i].y+cells[i].height);
+            
+            if(rect::intersection(R, crect).get_area() > best_fixed_overlap){
+                best_fixed = R; best_fixed_c = i;
+                best_fixed_overlap = rect::intersection(R, crect).get_area();
+            }
+        }
+    }
+
+    if(best_cell_overlap >= best_fixed_overlap and best_cell_overlap > 0){
+        return branch_overlap_removal(best_fc, best_sc);
+    }
+    else if(best_fixed_overlap > 0){
+        return branch_overlap_removal(best_fixed_c, best_fixed);
+    }
+    else{
         assert(is_correct());
         return std::vector<placement_problem>();
     }
-    else{
-        return branch_overlap_removal(best_fc, best_sc);
-    }
-    
-
-    /*    
-    bool found_unpitched, best_pitch_dir;
-    int best_pitch_var, best_pitched_cell;
-
-    // Branch to respect the pitch
-    for(int i=0; i+1<cells.size(); ++i){
-        
-    }
-    */
 }
 
 

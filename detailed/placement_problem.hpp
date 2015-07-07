@@ -13,6 +13,7 @@ struct cell{
 };
 struct rect{
     int xmin, ymin, xmax, ymax;
+    rect() {}
     rect(int xmn, int ymn, int xmx, int ymx) : xmin(xmn), ymin(ymn), xmax(xmx), ymax(ymx) {}
 
     static rect intersection(rect a, rect b){ return rect(std::max(a.xmin, b.xmin), std::max(a.ymin, b.ymin), std::min(a.xmax, b.xmax), std::min(a.ymax, b.ymax)); }
@@ -54,7 +55,11 @@ class placement_problem{
     void add_y_constraint(int fc, int sc, int min_dist);
     void apply_constraint(generic_constraint constraint);
 
+    // Branch with given added constraints, without or with added opposite constraints
+    std::vector<placement_problem> branch_on_constraints(std::vector<generic_constraint> constraints) const;
+
     std::vector<placement_problem> branch_overlap_removal(int c1, int c2) const;
+    std::vector<placement_problem> branch_overlap_removal(int c1, rect fixed_elt) const;
     std::vector<placement_problem> branch_pitch(int c) const;
 
     void tighten();
@@ -62,6 +67,8 @@ class placement_problem{
     public:
     int cell_count() const{ return cells.size(); }
     int net_count() const{ return nets.size(); }
+
+    bool operator<(placement_problem const & o) const;
 
     bool is_feasible() const;
     bool is_correct() const;
