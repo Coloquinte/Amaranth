@@ -67,6 +67,8 @@ class placement_problem{
     bool is_correct() const;
     int get_cost() const;
 
+    int get_cost_from_primal() const;
+
     std::vector<point> get_positions() const;
     std::vector<placement_problem> branch() const;
 

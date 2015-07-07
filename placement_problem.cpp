@@ -93,7 +93,43 @@ bool placement_problem::is_correct() const{
 }
 
 int placement_problem::get_cost() const{
-    return x_flow.get_cost() + y_flow.get_cost();
+    int ret = x_flow.get_cost() + y_flow.get_cost();
+    /*if(is_feasible()){
+        int exact = get_cost_from_primal();
+        assert(ret == exact);
+        //if(ret != exact)
+        //    std::cout << "Exact cost is " << exact << " vs dual of " << ret << std::endl;
+    }*/
+    return ret;
+}
+
+int placement_problem::get_cost_from_primal() const{
+    std::vector<point> pos = get_positions();
+    int tot_cost=0;
+    for(auto const & n : nets){
+        if(n.empty()) continue;
+        int xmin=std::numeric_limits<int>::max(),
+            ymin=std::numeric_limits<int>::max(),
+            xmax=std::numeric_limits<int>::min(),
+            ymax=std::numeric_limits<int>::min();
+        for(auto const p : n){
+            if(p.ind == -1){
+                xmin = std::min(xmin, p.xmin);
+                xmax = std::max(xmax, p.xmax);
+                ymin = std::min(ymin, p.ymin);
+                ymax = std::max(ymax, p.ymax);
+            }
+            else{
+                xmin = std::min(xmin, pos[p.ind].x + p.xmin);
+                xmax = std::max(xmax, pos[p.ind].x + p.xmax);
+                ymin = std::min(ymin, pos[p.ind].y + p.ymin);
+                ymax = std::max(ymax, pos[p.ind].y + p.ymax);
+            }
+        }
+        assert(xmax >= xmin and ymax >= ymin);
+        tot_cost += ((xmax-xmin) + (ymax-ymin));
+    }
+    return tot_cost;
 }
 
 std::vector<point> placement_problem::get_positions() const{
@@ -222,6 +258,7 @@ placement_problem::placement_problem(rect bounding_box, std::vector<cell> icells
     //std::cout << "Net edges" << std::endl;
     // Edges for the nets
     for(int i=0; i<net_count(); ++i){
+        assert(not nets[i].empty());
         int UB_ind = cell_count() + 1 + 2*i;
         int LB_ind = UB_ind + 1;
         for(pin const cur_pin : nets[i]){
@@ -229,8 +266,8 @@ placement_problem::placement_problem(rect bounding_box, std::vector<cell> icells
             // cur_pin.ind == -1 ==> Fixed pin case
             x_flow.add_edge(UB_ind, cur_pin.ind+1, -cur_pin.xmax);
             y_flow.add_edge(UB_ind, cur_pin.ind+1, -cur_pin.ymax);
-            x_flow.add_edge(cur_pin.ind+1, LB_ind, cur_pin.xmin);
-            y_flow.add_edge(cur_pin.ind+1, LB_ind, cur_pin.ymin);
+            x_flow.add_edge(cur_pin.ind+1, LB_ind,  cur_pin.xmin);
+            y_flow.add_edge(cur_pin.ind+1, LB_ind,  cur_pin.ymin);
         }
     }
 
