@@ -269,6 +269,11 @@ placement_problem::placement_problem(rect bounding_box, std::vector<cell> icells
         y_flow.add_edge(0, i+1, bounding_box.ymax - cells[i].height); // Edge from the fixed node: upper limit of the region
     }
 
+    for(point p : get_positions()){
+        assert(p.x != std::numeric_limits<int>::max());
+        assert(p.y != std::numeric_limits<int>::max());
+    }
+
     //x_flow.print();
     //y_flow.print();
 }

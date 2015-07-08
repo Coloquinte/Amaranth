@@ -32,6 +32,7 @@ class MCF_graph{
         queue_elt(int d, int c, int i) : node_elt(c, i), destination_node(d) {}
     };
 
+    bool check_optimal() const;
     std::vector<node_elt> get_Bellman_Ford(int source_node) const;
 
     public:

@@ -61,9 +61,11 @@ int main(){
     int best_correct_solution = std::numeric_limits<int>::max();
     long long nb_evaluated_nodes = 0, nb_bound_pruned = 0, nb_feasibility_pruned = 0;
     while(not to_evaluate.empty()){
-        std::chrono::time_point<std::chrono::system_clock> cur_time = std::chrono::system_clock::now();
-        int time_to_last_sol = std::chrono::duration_cast<std::chrono::milliseconds>(cur_time-last_sol).count();
-        if(time_to_last_sol > max_time_ms) break;
+        if(nb_evaluated_nodes % 1000 == 0){
+            std::chrono::time_point<std::chrono::system_clock> cur_time = std::chrono::system_clock::now();
+            int time_to_last_sol = std::chrono::duration_cast<std::chrono::milliseconds>(cur_time-last_sol).count();
+            if(time_to_last_sol > max_time_ms) break;
+        }
         ++ nb_evaluated_nodes;
         //if(nb_evaluated_nodes % 1000 == 0) std::cout << "Evaluated " << nb_evaluated_nodes << " nodes" << std::endl;
 
@@ -73,6 +75,7 @@ int main(){
             if(cur.is_correct()){
                 best_correct_solution = cur_cost;
                 // std::cout << "Found new correct solution, of cost " << cur_cost << std::endl;
+                std::chrono::time_point<std::chrono::system_clock> cur_time = std::chrono::system_clock::now();
                 int elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(cur_time-start).count();
                 sols.emplace_back(cur_cost, elapsed_ms);
                 last_sol = std::chrono::system_clock::now();
@@ -94,18 +97,17 @@ int main(){
     end = std::chrono::system_clock::now();
 
     int elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
-
+    std::cout << first_pl.cell_count() << "\t" << first_pl.net_count() << "\t";
     if(not sols.empty()){
-        std::cout << "Found solution " << sols.back().first << " in " << sols.back().second << " ms";
-        if(to_evaluate.empty()) std::cout << ", optimal";
-        else std::cout << ", unproven";
+        //std::cout << "Found: " << sols.back().second << " ms";
+        if(to_evaluate.empty()) std::cout << "O";
+        else std::cout << "U";
     }
     else{
-        if(to_evaluate.empty()) std::cout << "Infeasible";
-        else std::cout << "Not found";
+        if(to_evaluate.empty()) std::cout << "I";
+        else std::cout << "F";
     }
-    std::cout << ", finished in " << elapsed_ms << " ms, evaluated " << nb_evaluated_nodes << " nodes";
-    std::cout << " (" << first_pl.cell_count() << " cells, " << first_pl.net_count() << " nets)" << std::endl;
+    std::cout << "\t" << elapsed_ms << "\t" << nb_evaluated_nodes << "\t" << nb_bound_pruned << "\t" << nb_feasibility_pruned << std::endl;
     //std::cout << "Finished, in " << elapsed_ms << " ms, evaluated " << nb_evaluated_nodes << " nodes" << std::endl;
     //std::cout << nb_bound_pruned + nb_feasibility_pruned << " were pruned, " << nb_bound_pruned << " for being suboptimal and " << nb_feasibility_pruned << " for being infeasible" << std::endl;
 

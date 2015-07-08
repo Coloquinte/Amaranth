@@ -35,7 +35,6 @@ std::vector<MCF_graph::node_elt> MCF_graph::get_Bellman_Ford(int source_node) co
         if(not found_relaxation) break;
         if(found_relaxation and i == node_count()){
             accessibles[source_node] = node_elt(-1, -1);
-            // std::cout << "Negative cost cycle in Bellman-Ford!!!" << std::endl;
         }
     }
     return accessibles;
@@ -49,11 +48,19 @@ std::vector<int> MCF_graph::get_potentials() const{
     return ret;
 }
 
+bool MCF_graph::check_optimal() const{
+    std::vector<int> potentials = get_potentials();
+    for(edge const E : edges){
+        if(E.cost < potentials[E.dest] - potentials[E.source] and potentials[E.dest] != max_int and potentials[E.source] != max_int) return false;
+    }
+    return true;
+}
+
 void MCF_graph::add_edge(int esource, int edestination, int ecost){
     assert(esource != edestination and esource < node_count() and edestination < node_count() and esource >= 0 and edestination >= 0);
     int sent_flow=0;
 
-    //std::cout << "Creating an edge (" << esource << ", " << edestination << "), cost " << ecost << std::endl;
+    // Handling of redundant edges
     for(auto it = edges.begin(); it != edges.end(); ){
         if(it->source == esource and it->dest == edestination){
             if(it->cost > ecost){
@@ -76,7 +83,7 @@ void MCF_graph::add_edge(int esource, int edestination, int ecost){
         // Perform Bellman-Ford algorithm
         // Find a path from the edge's *destination* to its *source* to make a cycle
         std::vector<node_elt> accessibles = get_Bellman_Ford(edestination);
-        assert(accessibles[edestination].cost == 0);// std::cout << "Found a negative-cost cycle in the residual graph!" << std::endl;
+        assert(accessibles[edestination].cost == 0); // If we found a negative cost cycle, then our previous solution was not optimal
 
         // If the cycle has negative cost, send flow along this cycle
         int path_cost = accessibles[esource].cost;
@@ -87,6 +94,7 @@ void MCF_graph::add_edge(int esource, int edestination, int ecost){
             int max_flow = max_int;
             std::vector<int> pos_edges, neg_edges; // Edges where the flow is sent in the same direction or not
             int cur_node=esource;
+            // TODO: detect negative cost cycles with a single edge in the opposite direction; this edge may be safely removed
             while(cur_node != edestination){
                 int e = accessibles[cur_node].incoming_edge;
                 assert(e >= 0);
@@ -117,7 +125,7 @@ void MCF_graph::add_edge(int esource, int edestination, int ecost){
             maybe_cycle = false;
         }
     }
-
+    //assert(not bounded or check_optimal());
  
     edges.emplace_back(esource, edestination, ecost, sent_flow);
 }
