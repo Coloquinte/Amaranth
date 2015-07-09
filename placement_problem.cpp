@@ -7,6 +7,23 @@
 #include <limits>
 #include <algorithm>
 
+int evaluate_branches(std::vector<placement_problem> const & branches){
+    
+    int ret=0;
+    for(auto const & pb : branches)
+        ret += pb.get_cost();
+    if(not branches.empty())
+        return ret / branches.size();
+    else
+        return std::numeric_limits<int>::max();
+    /*
+    int ret=std::numeric_limits<int>::max();
+    for(auto const & pb : branches)
+        ret = std::min(pb.get_cost(),ret);
+    return ret;
+    */
+}
+
 bool placement_problem::operator<(placement_problem const & o) const{
     if(is_feasible() and o.is_feasible()) return get_cost() < o.get_cost();
     else return (not is_feasible()) and o.is_feasible(); // Unfeasible first
@@ -45,7 +62,8 @@ std::vector<placement_problem> placement_problem::branch_on_constraints(std::vec
     }
     std::vector<placement_problem> ret;
     for(auto const & cur : probs){
-        ret.push_back(cur.first);
+        if(cur.first.is_feasible())
+            ret.push_back(cur.first);
     }
     return ret;
 }
@@ -76,11 +94,7 @@ std::vector<placement_problem> placement_problem::branch_overlap_removal(int c1,
 }
 
 bool placement_problem::is_feasible() const{
-    bool maybe = x_flow.is_bounded() and y_flow.is_bounded();
-    for(rect const R : position_constraints){
-        maybe = maybe and (R.xmin <= R.xmax) and (R.ymin <= R.ymax);
-    }
-    return maybe;
+    return x_flow.is_bounded() and y_flow.is_bounded();
 }
 
 // Verify that the pitches for the cells are respected and that the cells do not overlap
@@ -176,7 +190,8 @@ std::vector<placement_problem> placement_problem::branch() const{
     std::vector<point> pos = get_positions();
 
     int best_fc, best_sc;
-    int best_cell_overlap=0;
+    int best_cell_measure=0;
+    bool found_cell_overlap=false;
 
     // Branch to avoid overlaps between cells
     for(int i=0; i+1<cells.size(); ++i){
@@ -185,32 +200,43 @@ std::vector<placement_problem> placement_problem::branch() const{
                  sc(pos[j].x, pos[j].y, pos[j].x+cells[j].width, pos[j].y+cells[j].height);
             
             // Now how much area is shared
-            if(rect::intersection(fc, sc).get_area() > best_cell_overlap){
-                best_fc = i; best_sc = j;
-                best_cell_overlap = rect::intersection(fc, sc).get_area();
+            if(rect::intersection(fc, sc).get_area() > 0){
+                found_cell_overlap=true;
+                auto branches = branch_overlap_removal(i, j);
+                int measure = evaluate_branches(branches);
+                if(measure > best_cell_measure){
+                    best_cell_measure = measure;
+                    best_fc = i; best_sc = j;
+                }
             }
         }
     }
 
     rect best_fixed;
     int best_fixed_c;
-    int best_fixed_overlap=0;
+    int best_fixed_measure=0;
+    bool found_fixed_overlap=false;
 
     for(rect const R : fixed_elts){
         for(int i=0; i<cells.size(); ++i){
             rect crect(pos[i].x, pos[i].y, pos[i].x+cells[i].width, pos[i].y+cells[i].height);
             
-            if(rect::intersection(R, crect).get_area() > best_fixed_overlap){
-                best_fixed = R; best_fixed_c = i;
-                best_fixed_overlap = rect::intersection(R, crect).get_area();
+            if(rect::intersection(R, crect).get_area() > 0){
+                found_fixed_overlap=true;
+                auto branches = branch_overlap_removal(i, R);
+                int measure = evaluate_branches(branches);
+                if(measure > best_fixed_measure){
+                    best_fixed_measure = measure;
+                    best_fixed = R; best_fixed_c = i;
+                }
             }
         }
     }
 
-    if(best_cell_overlap >= best_fixed_overlap and best_cell_overlap > 0){
+    if(found_cell_overlap and (not found_fixed_overlap or best_cell_measure>= best_fixed_measure) ){
         return branch_overlap_removal(best_fc, best_sc);
     }
-    else if(best_fixed_overlap > 0){
+    else if(found_fixed_overlap){
         return branch_overlap_removal(best_fixed_c, best_fixed);
     }
     else{
