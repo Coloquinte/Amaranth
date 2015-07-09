@@ -45,7 +45,8 @@ std::vector<placement_problem> placement_problem::branch_on_constraints(std::vec
     }
     std::vector<placement_problem> ret;
     for(auto const & cur : probs){
-        ret.push_back(cur.first);
+        if(cur.first.is_feasible())
+            ret.push_back(cur.first);
     }
     return ret;
 }
