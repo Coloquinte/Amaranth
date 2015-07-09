@@ -107,7 +107,7 @@ int main(){
         if(to_evaluate.empty()) std::cout << "I";
         else std::cout << "F";
     }
-    std::cout << "\t" << elapsed_ms << "\t" << nb_evaluated_nodes << "\t" << nb_bound_pruned << "\t" << nb_feasibility_pruned << std::endl;
+    std::cout << "\t" << elapsed_ms << "\t" << nb_evaluated_nodes << std::endl; // << "\t" << nb_bound_pruned << "\t" << nb_feasibility_pruned << std::endl;
     //std::cout << "Finished, in " << elapsed_ms << " ms, evaluated " << nb_evaluated_nodes << " nodes" << std::endl;
     //std::cout << nb_bound_pruned + nb_feasibility_pruned << " were pruned, " << nb_bound_pruned << " for being suboptimal and " << nb_feasibility_pruned << " for being infeasible" << std::endl;
 
