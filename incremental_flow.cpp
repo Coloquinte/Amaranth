@@ -33,8 +33,9 @@ std::vector<MCF_graph::node_elt> MCF_graph::get_Bellman_Ford(int source_node) co
             }
         }
         if(not found_relaxation) break;
-        if(found_relaxation and i == node_count()){
+        else if(i == node_count() or accessibles[source_node].cost < 0){
             accessibles[source_node] = node_elt(-1, -1);
+            break;
         }
     }
     return accessibles;
