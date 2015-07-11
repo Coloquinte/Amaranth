@@ -1,3 +1,4 @@
+#!/bin/bash
 
 dataset=$1
 resultdir=$2

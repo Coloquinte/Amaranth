@@ -49,10 +49,11 @@ if len(data) == 0:
 #cell_counts = {cur[cells] for cur in data}
 
 print("Number of problems: ", len(data))
+print("Solved successfully ", len([d for d in data if d["res"]=="O"]))
 print("Average time is: ", get_average(data, "time"))
-print("Average visited node count is: ", get_average(data, "nodes"))
-print("Average time for succesful runs is: ", get_average([d for d in data if d["res"] == "O"], "time"))
-print("Average node count for succesful runs is: ", get_average([d for d in data if d["res"] == "O"], "nodes"))
+print("Average time for successful runs is: ", get_average([d for d in data if d["res"] == "O"], "time"))
+print("Explored " + str(get_average(data, "nodes")) + " nodes on average")
+print("For successful runs, explored " + str(get_average([d for d in data if d["res"] == "O"], "nodes")) + " nodes on average")
 
 print_array(get_cumulative(data, "time"),  sys.argv[1]+"/times_"+sys.argv[2])
 print_array(get_cumulative(data, "nodes"), sys.argv[1]+"/nodes_"+sys.argv[2])
