@@ -7,7 +7,7 @@
 #include <iostream>
 
 namespace{
-    int const max_int = std::numeric_limits<int>::max();
+    int const max_int = std::numeric_limits<int>::max()/2; // Avoid overflows: half the maximum
 }
 
 std::vector<MCF_graph::node_elt> MCF_graph::get_Bellman_Ford(int source_node) const{
@@ -17,19 +17,15 @@ std::vector<MCF_graph::node_elt> MCF_graph::get_Bellman_Ford(int source_node) co
         bool found_relaxation = false;
         for(int e=0; e<edges.size(); ++e){
             edge const E = edges[e];
-            if(accessibles[E.source].cost < max_int){
-                int forward_cost = accessibles[E.source].cost + E.cost;
-                if(forward_cost < accessibles[E.dest].cost){
-                    accessibles[E.dest] = node_elt(forward_cost, e);
-                    found_relaxation = true;
-                }
+            int forward_cost = accessibles[E.source].cost + E.cost;
+            if(forward_cost < accessibles[E.dest].cost){
+                accessibles[E.dest] = node_elt(forward_cost, e);
+                found_relaxation = true;
             }
-            if(E.flow > 0 and accessibles[E.dest].cost < max_int){
-                int backward_cost = accessibles[E.dest].cost - E.cost;
-                if(backward_cost < accessibles[E.source].cost){
-                    accessibles[E.source] = node_elt(backward_cost, e);
-                    found_relaxation = true;
-                }
+            int backward_cost = accessibles[E.dest].cost - E.cost;
+            if(backward_cost < accessibles[E.source].cost and E.flow > 0){
+                accessibles[E.source] = node_elt(backward_cost, e);
+                found_relaxation = true;
             }
         }
         if(not found_relaxation) break;
@@ -52,7 +48,7 @@ std::vector<int> MCF_graph::get_potentials() const{
 bool MCF_graph::check_optimal() const{
     std::vector<int> potentials = get_potentials();
     for(edge const E : edges){
-        if(E.cost < potentials[E.dest] - potentials[E.source] and potentials[E.dest] != max_int and potentials[E.source] != max_int) return false;
+        if(E.cost < potentials[E.dest] - potentials[E.source] and potentials[E.dest] < max_int and potentials[E.source] < max_int) return false;
     }
     return true;
 }
