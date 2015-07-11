@@ -7,21 +7,36 @@
 #include <limits>
 #include <algorithm>
 
-int evaluate_branches(std::vector<placement_problem> const & branches){
-    
-    int ret=0;
-    for(auto const & pb : branches)
-        ret += pb.get_cost();
-    if(not branches.empty())
-        return ret / branches.size();
-    else
-        return std::numeric_limits<int>::max();
-    /*
-    int ret=std::numeric_limits<int>::max();
-    for(auto const & pb : branches)
-        ret = std::min(pb.get_cost(),ret);
-    return ret;
-    */
+int placement_problem::evaluate_branch(int c1, int c2) const{
+    int x_cost = x_flow.get_cost(), y_cost = y_flow.get_cost();
+    MCF_graph rgt_x_flow = x_flow, lft_x_flow = x_flow;
+    MCF_graph upp_y_flow = y_flow, dow_y_flow = y_flow;
+    rgt_x_flow.add_edge(c2+1, c1+1, -cells[c1].width );
+    lft_x_flow.add_edge(c1+1, c2+1, -cells[c2].width );
+    upp_y_flow.add_edge(c2+1, c1+1, -cells[c1].height);
+    dow_y_flow.add_edge(c1+1, c2+1, -cells[c2].height);
+    int ret = 0, cnt = 0;
+    if(rgt_x_flow.is_bounded()){ ++cnt; ret += rgt_x_flow.get_cost() + y_cost; }
+    if(lft_x_flow.is_bounded()){ ++cnt; ret += lft_x_flow.get_cost() + y_cost; }
+    if(upp_y_flow.is_bounded()){ ++cnt; ret += upp_y_flow.get_cost() + x_cost; }
+    if(dow_y_flow.is_bounded()){ ++cnt; ret += dow_y_flow.get_cost() + x_cost; }
+    return cnt > 0 ? ret / cnt : std::numeric_limits<int>::max();
+}
+
+int placement_problem::evaluate_branch(int c1, rect fixed) const{
+    int x_cost = x_flow.get_cost(), y_cost = y_flow.get_cost();
+    MCF_graph rgt_x_flow = x_flow, lft_x_flow = x_flow;
+    MCF_graph upp_y_flow = y_flow, dow_y_flow = y_flow;
+    rgt_x_flow.add_edge(0, c1+1, fixed.xmax-cells[c1].width );
+    lft_x_flow.add_edge(c1+1, 0, -fixed.xmin);
+    upp_y_flow.add_edge(0, c1+1, fixed.ymax-cells[c1].height);
+    dow_y_flow.add_edge(c1+1, 0, -fixed.ymin);
+    int ret = 0, cnt = 0;
+    if(rgt_x_flow.is_bounded()){ ++cnt; ret += rgt_x_flow.get_cost() + y_cost; }
+    if(lft_x_flow.is_bounded()){ ++cnt; ret += lft_x_flow.get_cost() + y_cost; }
+    if(upp_y_flow.is_bounded()){ ++cnt; ret += upp_y_flow.get_cost() + x_cost; }
+    if(dow_y_flow.is_bounded()){ ++cnt; ret += dow_y_flow.get_cost() + x_cost; }
+    return cnt > 0 ? ret / cnt : std::numeric_limits<int>::max();
 }
 
 bool placement_problem::operator<(placement_problem const & o) const{
@@ -202,8 +217,7 @@ std::vector<placement_problem> placement_problem::branch() const{
             // Now how much area is shared
             if(rect::intersection(fc, sc).get_area() > 0){
                 found_cell_overlap=true;
-                auto branches = branch_overlap_removal(i, j);
-                int measure = evaluate_branches(branches);
+                int measure = evaluate_branch(i, j);
                 if(measure > best_cell_measure){
                     best_cell_measure = measure;
                     best_fc = i; best_sc = j;
@@ -223,8 +237,7 @@ std::vector<placement_problem> placement_problem::branch() const{
             
             if(rect::intersection(R, crect).get_area() > 0){
                 found_fixed_overlap=true;
-                auto branches = branch_overlap_removal(i, R);
-                int measure = evaluate_branches(branches);
+                int measure = evaluate_branch(i, R);
                 if(measure > best_fixed_measure){
                     best_fixed_measure = measure;
                     best_fixed = R; best_fixed_c = i;

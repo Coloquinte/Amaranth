@@ -62,6 +62,10 @@ class placement_problem{
     std::vector<placement_problem> branch_overlap_removal(int c1, rect fixed_elt) const;
     std::vector<placement_problem> branch_pitch(int c) const;
 
+    int evaluate_branch(int c1, int c2) const;
+    int evaluate_branch(int c1, rect fixed_elt) const;
+    int evaluate_branch(int c) const;
+
     void tighten();
 
     public:
