@@ -33,6 +33,7 @@ class MCF_graph{
     };
 
     bool check_optimal() const;
+    void reorder_edges();
     std::vector<node_elt> get_Bellman_Ford(int source_node) const;
 
     public:

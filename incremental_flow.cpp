@@ -53,6 +53,15 @@ bool MCF_graph::check_optimal() const{
     return true;
 }
 
+void MCF_graph::reorder_edges(){
+    for(int i=0, j=0; i<edges.size(); ++i){
+        if(edges[i].flow > 0){
+            std::swap(edges[i], edges[j]);
+            ++j;
+        }
+    }
+}
+
 void MCF_graph::add_edge(int esource, int edestination, int ecost){
     assert(esource != edestination and esource < node_count() and edestination < node_count() and esource >= 0 and edestination >= 0);
     int sent_flow=0;
@@ -125,6 +134,7 @@ void MCF_graph::add_edge(int esource, int edestination, int ecost){
     //assert(not bounded or check_optimal());
  
     edges.emplace_back(esource, edestination, ecost, sent_flow);
+    reorder_edges();
 }
 
 MCF_graph::MCF_graph(int node_cnt, std::vector<MCF_graph::edge> edge_list) : edges(edge_list), nb_nodes(node_cnt), bounded(true), cost(0){
