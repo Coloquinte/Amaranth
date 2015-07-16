@@ -49,6 +49,7 @@ bool MCF_graph::check_optimal() const{
     std::vector<int> potentials = get_potentials();
     for(edge const E : edges){
         if(E.cost < potentials[E.dest] - potentials[E.source] and potentials[E.dest] < max_int and potentials[E.source] < max_int) return false;
+        if(E.flow > 0 and E.cost > potentials[E.dest] - potentials[E.source] and potentials[E.dest] < max_int and potentials[E.source] < max_int) return false;
     }
     return true;
 }
@@ -129,9 +130,9 @@ void MCF_graph::add_edge(int esource, int edestination, int ecost){
             maybe_cycle = false;
         }
     }
-    //assert(not bounded or check_optimal());
  
     edges.emplace_back(esource, edestination, ecost, sent_flow);
+    assert(not bounded or check_optimal());
 }
 
 MCF_graph::MCF_graph(int node_cnt, std::vector<MCF_graph::edge> edge_list) : edges(edge_list), nb_nodes(node_cnt), bounded(true), cost(0){
