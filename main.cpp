@@ -24,7 +24,7 @@ placement_problem input_placement_problem(){
     std::cin >> nb_fixeds;
     std::vector<rect> fixeds;
     for(int i=0; i<nb_fixeds; ++i){
-        int xmn, ymn, xmx, ymx, ind;
+        int xmn, ymn, xmx, ymx;
         std::cin >> xmn >> ymn >> xmx >> ymx;
         fixeds.emplace_back(xmn, ymn, xmx, ymx);
     }

@@ -14,6 +14,8 @@ class MCF_graph{
 
     public:
     std::vector<edge> edges;
+    std::vector<std::vector<int> > adjacent_edges;
+    std::vector<int> potentials;
 
     int nb_nodes;
     int cost;
@@ -30,12 +32,17 @@ class MCF_graph{
     
     struct queue_elt : node_elt{
         int destination_node;
-    
-        queue_elt(int d, int c, int i) : node_elt(c, i), destination_node(d) {}
+
+        bool operator<(queue_elt const & o) const { return cost > o.cost; } // For priority queues
+
+        queue_elt(int d, int c, int i, int mf) : node_elt(c, i, mf), destination_node(d) {}
     };
 
     bool check_optimal() const;
     std::vector<node_elt> get_Bellman_Ford(int source_node) const;
+    std::vector<node_elt> get_reduced_Dijkstra(int source_node) const;
+    std::vector<node_elt> update_Bellman_Ford(int source_node);
+    std::vector<node_elt> update_reduced_Dijkstra(int source_node);
 
     public:
     // Create a graph from an OPTIMAL flow (later maybe add cycle cancelling)

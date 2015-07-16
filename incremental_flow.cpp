@@ -11,6 +11,7 @@ namespace{
 }
 
 std::vector<MCF_graph::node_elt> MCF_graph::get_Bellman_Ford(int source_node) const{
+    assert(source_node < node_count());
     std::vector<node_elt> accessibles(node_count(), node_elt(max_int, -1));
     accessibles[source_node] = node_elt(0, -1);
     for(int i=0; i<=node_count(); ++i){
@@ -30,6 +31,7 @@ std::vector<MCF_graph::node_elt> MCF_graph::get_Bellman_Ford(int source_node) co
         }
         if(not found_relaxation) break;
         else if(i == node_count() or accessibles[source_node].cost < 0){
+            assert(false); // Negative cost cycle, unexpected
             accessibles[source_node] = node_elt(-1, -1);
             break;
         }
@@ -37,13 +39,67 @@ std::vector<MCF_graph::node_elt> MCF_graph::get_Bellman_Ford(int source_node) co
     return accessibles;
 }
 
-std::vector<int> const MCF_graph::get_potentials() const{
-    if(node_count() == 0) return std::vector<int>();
-    std::vector<node_elt> accessibles = get_Bellman_Ford(0);
-    std::vector<int> ret;
-    for(node_elt const N : accessibles) ret.push_back(N.cost);
-    return ret;
+std::vector<MCF_graph::node_elt> MCF_graph::get_reduced_Dijkstra(int source_node) const{
+    assert(source_node < node_count());
+    std::vector<node_elt> accessibles(node_count(), node_elt(max_int, -1));
+
+    std::priority_queue<queue_elt> pqueue;
+    pqueue.emplace(source_node, -potentials[source_node], -1, max_int);
+
+    std::cerr << "Potentials (" << potentials.size() << ", " << node_count() << " nodes): ";
+    for(int p : potentials)
+        std::cerr << p << " ";
+    std::cerr << std::endl;
+
+    // Use the cost - the potential: enforces non-negative edge costs
+    while(not pqueue.empty()){
+        auto cur = pqueue.top(); pqueue.pop();
+        int real_cost = cur.cost + potentials[cur.destination_node];
+        if(real_cost < accessibles[cur.destination_node].cost){
+            assert(accessibles[cur.destination_node].cost >= max_int);
+            accessibles[cur.destination_node] = node_elt(real_cost, cur.incoming_edge, cur.max_flow);
+            for(int e : adjacent_edges[cur.destination_node]){
+                edge const E = edges[e];
+                assert(potentials[E.dest] - potentials[E.source] >= E.cost);
+                if(E.source == cur.destination_node){
+                    int this_cost = real_cost + E.cost;
+                    int reduced_cost = this_cost - potentials[E.dest];
+                    if(this_cost < accessibles[E.dest].cost){
+                        pqueue.emplace(E.dest, reduced_cost, e, cur.max_flow);
+                    }
+                }
+                else if(E.flow > 0){
+                    assert(potentials[E.dest] - potentials[E.source] == E.cost);
+                    assert(E.dest == cur.destination_node);
+                    int this_cost = real_cost - E.cost;
+                    int reduced_cost = this_cost - potentials[E.source];
+                    if(this_cost < accessibles[E.source].cost){
+                        pqueue.emplace(E.source, reduced_cost, e, std::min(cur.max_flow, E.flow));
+                    }
+                }
+            }
+        }
+    }
+
+    return accessibles;
 }
+
+std::vector<MCF_graph::node_elt> MCF_graph::update_Bellman_Ford(int source_node){
+    auto accessibles = get_Bellman_Ford(source_node);
+    for(int i=0; i<node_count(); ++i)
+        potentials[i]=accessibles[i].cost;
+    assert(check_optimal());
+    return accessibles;
+}
+
+std::vector<MCF_graph::node_elt> MCF_graph::update_reduced_Dijkstra(int source_node){
+    auto accessibles = get_reduced_Dijkstra(source_node);
+    for(int i=0; i<node_count(); ++i)
+        potentials[i]=accessibles[i].cost;
+    assert(check_optimal());
+    return accessibles;
+}
+std::vector<int> const MCF_graph::get_potentials() const{ return potentials; }
 
 bool MCF_graph::check_optimal() const{
     std::vector<int> potentials = get_potentials();
@@ -95,7 +151,8 @@ void MCF_graph::add_edge(int esource, int edestination, int ecost){
     while(maybe_cycle){
         // Perform Bellman-Ford algorithm
         // Find a path from the edge's *destination* to its *source* to make a cycle
-        std::vector<node_elt> accessibles = get_Bellman_Ford(edestination);
+        std::vector<node_elt> accessibles = update_Bellman_Ford(edestination);
+        //std::vector<node_elt> accessibles = update_reduced_Dijkstra(edestination);
         assert(accessibles[edestination].cost == 0); // If we found a negative cost cycle, then our previous solution was not optimal
 
         // If the cycle has negative cost, send flow along this cycle
@@ -130,16 +187,27 @@ void MCF_graph::add_edge(int esource, int edestination, int ecost){
             maybe_cycle = false;
         }
     }
- 
+    adjacent_edges[esource     ].push_back(edges.size()); 
+    adjacent_edges[edestination].push_back(edges.size()); 
     edges.emplace_back(esource, edestination, ecost, sent_flow);
     assert(not bounded or check_optimal());
 }
 
-MCF_graph::MCF_graph(int node_cnt, std::vector<MCF_graph::edge> edge_list) : edges(edge_list), nb_nodes(node_cnt), bounded(true), cost(0){
+MCF_graph::MCF_graph(int node_cnt, std::vector<MCF_graph::edge> edge_list)
+: edges(edge_list)
+, adjacent_edges(node_cnt)
+, potentials(node_cnt, 0)
+, nb_nodes(node_cnt)
+, cost(0)
+, bounded(true){
     for(int e=0; e<edges.size(); ++e){
         edge cur = edges[e];
+        adjacent_edges[cur.source].push_back(e);
+        adjacent_edges[cur.dest  ].push_back(e);
         assert(cur.source < node_count() and cur.dest < node_count());
     }
+    if(node_count() > 0)
+        update_Bellman_Ford(0); // Obtain the potentials
 }
 
 void MCF_graph::print() const{
