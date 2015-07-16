@@ -7,30 +7,131 @@
 #include <limits>
 #include <algorithm>
 
-int placement_problem::evaluate_branch(int c1, int c2) const{
-    auto rgt = x_flow.try_edge(c2+1, c1+1, -cells[c1].width );
-    auto lft = x_flow.try_edge(c1+1, c2+1, -cells[c2].width );
-    auto upp = y_flow.try_edge(c2+1, c1+1, -cells[c1].height);
-    auto dow = y_flow.try_edge(c1+1, c2+1, -cells[c2].height);
-    int ret = 0, cnt = 0;
-    if(rgt.first){ ++cnt; ret += rgt.second; }
-    if(lft.first){ ++cnt; ret += lft.second; }
-    if(upp.first){ ++cnt; ret += upp.second; }
-    if(dow.first){ ++cnt; ret += dow.second; }
-    return cnt > 0 ? ret / cnt : std::numeric_limits<int>::max();
+int placement_problem::evaluate_branch(int c1, int c2, std::vector<point> const & pos, branching_rule rule) const{
+
+    rect fc(pos[c1].x, pos[c1].y, pos[c1].x+cells[c1].width, pos[c1].y+cells[c1].height),
+         sc(pos[c2].x, pos[c2].y, pos[c2].x+cells[c2].width, pos[c2].y+cells[c2].height);
+    int area = rect::intersection(fc, sc).get_area();
+    if(area <= 0) return -1;
+
+    int dist_x = std::min(fc.xmax-sc.xmin, sc.xmax-fc.xmin);
+    int dist_y = std::min(fc.ymax-sc.ymin, sc.ymax-fc.ymin);
+    assert(dist_x > 0 and dist_y > 0);
+    int height = cells[c1].height + cells[c2].height;
+    int width  = cells[c1].width  + cells[c2].width;
+    if(rule == AREA){
+        return area;
+    }
+    else if(rule == LMIN){
+        return std::min(dist_x, dist_y);
+    }
+    else if(rule == LMAX){
+        return std::max(dist_x, dist_y);
+    }
+    else if(rule == LAVG){
+        return dist_x+dist_y;
+    }
+    else if(rule == WMIN){
+        return std::min(height, width);
+    }
+    else if(rule == WMAX){
+        return std::max(height, width);
+    }
+    else if(rule == WAVG){
+        return height + width;
+    }
+    else if(rule == FIRST_CYCLE){
+        auto rgt = x_flow.try_edge(c2+1, c1+1, -cells[c1].width );
+        auto lft = x_flow.try_edge(c1+1, c2+1, -cells[c2].width );
+        auto upp = y_flow.try_edge(c2+1, c1+1, -cells[c1].height);
+        auto dow = y_flow.try_edge(c1+1, c2+1, -cells[c2].height);
+        int ret = 0, cnt = 0;
+        if(rgt.first){ ++cnt; ret += rgt.second; }
+        if(lft.first){ ++cnt; ret += lft.second; }
+        if(upp.first){ ++cnt; ret += upp.second; }
+        if(dow.first){ ++cnt; ret += dow.second; }
+        return cnt > 0 ? ret / cnt : std::numeric_limits<int>::max();
+    }
+    else if(rule == STRONG){
+        int x_cost = x_flow.get_cost(), y_cost = y_flow.get_cost();
+        MCF_graph rgt_x_flow = x_flow, lft_x_flow = x_flow;
+        MCF_graph upp_y_flow = y_flow, dow_y_flow = y_flow;
+        rgt_x_flow.add_edge(c2+1, c1+1, -cells[c1].width );
+        lft_x_flow.add_edge(c1+1, c2+1, -cells[c2].width );
+        upp_y_flow.add_edge(c2+1, c1+1, -cells[c1].height);
+        dow_y_flow.add_edge(c1+1, c2+1, -cells[c2].height);
+        int ret = 0, cnt = 0;
+        if(rgt_x_flow.is_bounded()){ ++cnt; ret += rgt_x_flow.get_cost() + y_cost; }
+        if(lft_x_flow.is_bounded()){ ++cnt; ret += lft_x_flow.get_cost() + y_cost; }
+        if(upp_y_flow.is_bounded()){ ++cnt; ret += upp_y_flow.get_cost() + x_cost; }
+        if(dow_y_flow.is_bounded()){ ++cnt; ret += dow_y_flow.get_cost() + x_cost; }
+        return cnt > 0 ? ret / cnt : std::numeric_limits<int>::max();
+    }
+    else{
+        assert(false);
+    }
 }
 
-int placement_problem::evaluate_branch(int c1, rect fixed) const{
-    auto rgt = x_flow.try_edge(0, c1+1, fixed.xmax-cells[c1].width );
-    auto lft = x_flow.try_edge(c1+1, 0, -fixed.xmin);
-    auto upp = y_flow.try_edge(0, c1+1, fixed.ymax-cells[c1].height);
-    auto dow = y_flow.try_edge(c1+1, 0, -fixed.ymin);
-    int ret = 0, cnt = 0;
-    if(rgt.first){ ++cnt; ret += rgt.second; }
-    if(lft.first){ ++cnt; ret += lft.second; }
-    if(upp.first){ ++cnt; ret += upp.second; }
-    if(dow.first){ ++cnt; ret += dow.second; }
-    return cnt > 0 ? ret / cnt : std::numeric_limits<int>::max();
+int placement_problem::evaluate_branch(int c1, rect fixed, std::vector<point> const & pos, branching_rule rule) const{
+    rect crect(pos[c1].x, pos[c1].y, pos[c1].x+cells[c1].width, pos[c1].y+cells[c1].height);
+    int area = rect::intersection(fixed, crect).get_area();
+    int dist_x = std::min(crect.xmax-fixed.xmin, fixed.xmax-crect.xmin);
+    int dist_y = std::min(crect.ymax-fixed.ymin, fixed.ymax-crect.ymin);
+    if(area <= 0) return -1;
+    int height = cells[c1].height + fixed.ymax - fixed.ymin;
+    int width  = cells[c1].width  + fixed.xmax - fixed.xmin;
+    if(rule == AREA){
+        return area;
+    }
+    else if(rule == LMIN){
+        return std::min(dist_x, dist_y);
+    }
+    else if(rule == LMAX){
+        return std::max(dist_x, dist_y);
+    }
+    else if(rule == LAVG){
+        return dist_x+dist_y;
+    }
+    else if(rule == WMIN){
+        return std::min(height, width);
+    }
+    else if(rule == WMAX){
+        return std::max(height, width);
+    }
+    else if(rule == WAVG){
+        return height + width;
+    }
+
+    else if(rule == FIRST_CYCLE){
+        auto rgt = x_flow.try_edge(0, c1+1, fixed.xmax-cells[c1].width );
+        auto lft = x_flow.try_edge(c1+1, 0, -fixed.xmin);
+        auto upp = y_flow.try_edge(0, c1+1, fixed.ymax-cells[c1].height);
+        auto dow = y_flow.try_edge(c1+1, 0, -fixed.ymin);
+        int ret = 0, cnt = 0;
+        if(rgt.first){ ++cnt; ret += rgt.second; }
+        if(lft.first){ ++cnt; ret += lft.second; }
+        if(upp.first){ ++cnt; ret += upp.second; }
+        if(dow.first){ ++cnt; ret += dow.second; }
+        return cnt > 0 ? ret / cnt : std::numeric_limits<int>::max();
+    }
+    else if(rule == STRONG){
+        int x_cost = x_flow.get_cost(), y_cost = y_flow.get_cost();
+        MCF_graph rgt_x_flow = x_flow, lft_x_flow = x_flow;
+        MCF_graph upp_y_flow = y_flow, dow_y_flow = y_flow;
+        rgt_x_flow.add_edge(0, c1+1, fixed.xmax-cells[c1].width );
+        lft_x_flow.add_edge(c1+1, 0, -fixed.xmin);
+        upp_y_flow.add_edge(0, c1+1, fixed.ymax-cells[c1].height);
+        dow_y_flow.add_edge(c1+1, 0, -fixed.ymin);
+        int ret = 0, cnt = 0;
+        if(rgt_x_flow.is_bounded()){ ++cnt; ret += rgt_x_flow.get_cost() + y_cost; }
+        if(lft_x_flow.is_bounded()){ ++cnt; ret += lft_x_flow.get_cost() + y_cost; }
+        if(upp_y_flow.is_bounded()){ ++cnt; ret += upp_y_flow.get_cost() + x_cost; }
+        if(dow_y_flow.is_bounded()){ ++cnt; ret += dow_y_flow.get_cost() + x_cost; }
+        return cnt > 0 ? ret / cnt : std::numeric_limits<int>::max();
+    }
+    else{
+        assert(false);
+    }
 }
 
 bool placement_problem::operator<(placement_problem const & o) const{
@@ -190,48 +291,38 @@ std::vector<point> placement_problem::get_positions() const{
     return ret;
 }
 
-std::vector<placement_problem> placement_problem::branch() const{
+std::vector<placement_problem> placement_problem::branch(branching_rule rule) const{
     // Chose a good branch based simply on the positions of the cells
     std::vector<point> pos = get_positions();
 
     int best_fc, best_sc;
-    int best_cell_measure=0;
+    int best_cell_measure=-1;
     bool found_cell_overlap=false;
 
     // Branch to avoid overlaps between cells
     for(int i=0; i+1<cells.size(); ++i){
         for(int j=i+1; j<cells.size(); ++j){
-            rect fc(pos[i].x, pos[i].y, pos[i].x+cells[i].width, pos[i].y+cells[i].height),
-                 sc(pos[j].x, pos[j].y, pos[j].x+cells[j].width, pos[j].y+cells[j].height);
-            
-            // Now how much area is shared
-            if(rect::intersection(fc, sc).get_area() > 0){
+            int measure = evaluate_branch(i, j, pos, rule);
+            if(measure >= 0 and measure > best_cell_measure){
                 found_cell_overlap=true;
-                int measure = evaluate_branch(i, j);
-                if(measure > best_cell_measure){
-                    best_cell_measure = measure;
-                    best_fc = i; best_sc = j;
-                }
+                best_cell_measure = measure;
+                best_fc = i; best_sc = j;
             }
         }
     }
 
     rect best_fixed;
     int best_fixed_c;
-    int best_fixed_measure=0;
+    int best_fixed_measure=-1;
     bool found_fixed_overlap=false;
 
     for(rect const R : fixed_elts){
         for(int i=0; i<cells.size(); ++i){
-            rect crect(pos[i].x, pos[i].y, pos[i].x+cells[i].width, pos[i].y+cells[i].height);
-            
-            if(rect::intersection(R, crect).get_area() > 0){
+            int measure = evaluate_branch(i, R, pos, rule);
+            if(measure >= 0 and measure > best_fixed_measure){
                 found_fixed_overlap=true;
-                int measure = evaluate_branch(i, R);
-                if(measure > best_fixed_measure){
-                    best_fixed_measure = measure;
-                    best_fixed = R; best_fixed_c = i;
-                }
+                best_fixed_measure = measure;
+                best_fixed = R; best_fixed_c = i;
             }
         }
     }

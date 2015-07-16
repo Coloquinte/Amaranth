@@ -25,6 +25,21 @@ struct pin : rect{
     pin(int i, rect r) : rect(r), ind(i) {}
 };
 
+enum branching_rule{
+    AREA,
+    // Rules based on the minimum displacement necessary on x and y
+    LMIN,
+    LMAX,
+    LAVG,
+    // Rules based on the dimensions of the cells
+    WMIN,
+    WMAX,
+    WAVG,
+    // Smart rules
+    FIRST_CYCLE,
+    STRONG
+};
+
 class placement_problem{
     public:
     struct relative_constraint{
@@ -63,7 +78,8 @@ class placement_problem{
     std::vector<placement_problem> branch_pitch(int c) const;
 
     int evaluate_branch(int c1, int c2) const;
-    int evaluate_branch(int c1, rect fixed_elt) const;
+    int evaluate_branch(int c1, int c2, std::vector<point> const & pos, branching_rule rule = AREA) const;
+    int evaluate_branch(int c1, rect fixed, std::vector<point> const & pos, branching_rule rule = AREA) const;
     int evaluate_branch(int c) const;
 
     void tighten();
@@ -81,7 +97,7 @@ class placement_problem{
     int get_cost_from_primal() const;
 
     std::vector<point> get_positions() const;
-    std::vector<placement_problem> branch() const;
+    std::vector<placement_problem> branch(branching_rule rule = AREA) const;
 
     placement_problem(rect bounding_box, std::vector<cell> icells, std::vector<std::vector<pin> > inets, std::vector<rect> fixed=std::vector<rect>());
 };
