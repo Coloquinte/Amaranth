@@ -122,9 +122,9 @@ void MCF_graph::add_edge(int esource, int edestination, int ecost){
                     edges[e].flow += max_flow;
                     cur_node = edges[e].source;
                 }
-                cost -= (max_flow * cycle_cost);
-                sent_flow += max_flow;
             }
+            cost -= (max_flow * cycle_cost);
+            sent_flow += max_flow;
         }
         else{ // Ok, no more cycle, optimal solution, we can just exit
             maybe_cycle = false;
