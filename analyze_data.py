@@ -39,6 +39,7 @@ for line in sys.stdin:
             "res"   : tokens[2],
             "time"  : int(tokens[3]),
             "nodes" : int(tokens[4]),
+            "cost" : int(tokens[5]),
             #"bprun" : int(tokens[5]),
             #"fprun" : int(tokens[6]),
         })
@@ -54,6 +55,7 @@ print("Average time is: ", get_average(data, "time"))
 print("Average time for successful runs is: ", get_average([d for d in data if d["res"] == "O"], "time"))
 print("Explored " + str(get_average(data, "nodes")) + " nodes on average")
 print("For successful runs, explored " + str(get_average([d for d in data if d["res"] == "O"], "nodes")) + " nodes on average")
+print("Average cost " + str(get_average([ d for d in data if d["res"] != "F"], "cost")) + " on average")
 
 print_array(get_cumulative(data, "time"),  sys.argv[1]+"/times_"+sys.argv[2])
 print_array(get_cumulative(data, "nodes"), sys.argv[1]+"/nodes_"+sys.argv[2])

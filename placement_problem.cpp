@@ -146,12 +146,8 @@ bool placement_problem::is_correct() const{
 
 int placement_problem::get_cost() const{
     int ret = x_flow.get_cost() + y_flow.get_cost();
-    /*if(is_feasible()){
-        int exact = get_cost_from_primal();
-        assert(ret == exact);
-        //if(ret != exact)
-        //    std::cout << "Exact cost is " << exact << " vs dual of " << ret << std::endl;
-    }*/
+    if(is_feasible())
+        assert(get_cost_from_primal() == ret);
     return ret;
 }
 
@@ -272,6 +268,14 @@ placement_problem::placement_problem(rect bounding_box, std::vector<cell> icells
         basic_y_edges.emplace_back(UB_ind, LB_ind, 0, 1);
     }
 
+    // Edges for the placement constraints
+    for(int i=0; i<cell_count(); ++i){
+        basic_x_edges.emplace_back(i+1, 0, -bounding_box.xmin); // Edge to the fixed node: left limit of the region
+        basic_x_edges.emplace_back(0, i+1, bounding_box.xmax - cells[i].width); // Edge from the fixed node: right limit of the region
+        basic_y_edges.emplace_back(i+1, 0, -bounding_box.ymin); // Edge to the fixed node: lower limit of the region
+        basic_y_edges.emplace_back(0, i+1, bounding_box.ymax - cells[i].height); // Edge from the fixed node: upper limit of the region
+    }
+
     x_flow = MCF_graph(cell_count() + 2*net_count() + 1, basic_x_edges);
     y_flow = MCF_graph(cell_count() + 2*net_count() + 1, basic_y_edges);
     //x_flow.print();
@@ -291,15 +295,6 @@ placement_problem::placement_problem(rect bounding_box, std::vector<cell> icells
             x_flow.add_edge(cur_pin.ind+1, LB_ind,  cur_pin.xmin);
             y_flow.add_edge(cur_pin.ind+1, LB_ind,  cur_pin.ymin);
         }
-    }
-
-    //std::cout << "Fixed edges" << std::endl;
-    // Edges for the placement constraints
-    for(int i=0; i<cell_count(); ++i){
-        x_flow.add_edge(i+1, 0, -bounding_box.xmin); // Edge to the fixed node: left limit of the region
-        x_flow.add_edge(0, i+1, bounding_box.xmax - cells[i].width); // Edge from the fixed node: right limit of the region
-        y_flow.add_edge(i+1, 0, -bounding_box.ymin); // Edge to the fixed node: lower limit of the region
-        y_flow.add_edge(0, i+1, bounding_box.ymax - cells[i].height); // Edge from the fixed node: upper limit of the region
     }
 
     for(point p : get_positions()){
