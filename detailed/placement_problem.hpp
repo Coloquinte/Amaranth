@@ -37,9 +37,12 @@ enum branching_rule{
     WMIN,
     WMAX,
     WAVG,
-    // Smart rules
-    FIRST_CYCLE,
-    STRONG
+    // Single cycle cost
+    CMIN,
+    CAVG,
+    // Strong branching cost
+    SMIN,
+    SAVG
 };
 
 class placement_problem{
@@ -68,8 +71,6 @@ class placement_problem{
     //bool feasible;
     //bool correct;
 
-    void add_x_constraint(int fc, int sc, int min_dist);
-    void add_y_constraint(int fc, int sc, int min_dist);
     void apply_constraint(generic_constraint constraint);
 
     // Branch with given added constraints, without or with added opposite constraints
@@ -78,6 +79,9 @@ class placement_problem{
     std::vector<placement_problem> branch_overlap_removal(int c1, int c2) const;
     std::vector<placement_problem> branch_overlap_removal(int c1, rect fixed_elt) const;
     std::vector<placement_problem> branch_pitch(int c) const;
+
+    std::vector<int> get_expected_branch(int c1, int c2, int w1, int w2, int h1, int h2) const;
+    std::vector<int> get_strong_branch(int c1, int c2, int w1, int w2, int h1, int h2) const;
 
     int evaluate_branch(int c1, int c2) const;
     int evaluate_branch(int c1, int c2, std::vector<point> const & pos, branching_rule rule = AREA) const;
