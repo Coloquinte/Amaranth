@@ -18,6 +18,8 @@ struct rect{
 
     static rect intersection(rect a, rect b){ return rect(std::max(a.xmin, b.xmin), std::max(a.ymin, b.ymin), std::min(a.xmax, b.xmax), std::min(a.ymax, b.ymax)); }
     int get_area() const { return std::max(0, xmax-xmin) * std::max(0, ymax-ymin); }
+    int get_height () const { return ymax-ymin; };
+    int get_width  () const { return xmax-xmin; };
 };
 
 struct pin : rect{

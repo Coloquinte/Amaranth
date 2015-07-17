@@ -7,6 +7,32 @@
 #include <limits>
 #include <algorithm>
 
+int eval_overlap(rect r1, rect r2, branching_rule rule){
+    int dist_x = std::min(r1.xmax-r2.xmin, r2.xmax-r1.xmin);
+    int dist_y = std::min(r1.ymax-r2.ymin, r2.ymax-r1.ymin);
+    assert(dist_x > 0 and dist_y > 0);
+    int height = r1.get_height() + r2.get_height();
+    int width  = r1.get_width()  + r2.get_width();
+    switch(rule){
+      case AREA:
+        return rect::intersection(r1, r2).get_area();
+      case LMIN:
+        return std::min(dist_x, dist_y);
+      case LMAX:
+        return std::max(dist_x, dist_y);
+      case LAVG:
+        return dist_x+dist_y;
+      case WMIN:
+        return std::min(height, width);
+      case WMAX:
+        return std::max(height, width);
+      case WAVG:
+        return height + width;
+      default:
+        abort();
+    }
+}
+
 int placement_problem::evaluate_branch(int c1, int c2, std::vector<point> const & pos, branching_rule rule) const{
 
     rect fc(pos[c1].x, pos[c1].y, pos[c1].x+cells[c1].width, pos[c1].y+cells[c1].height),
@@ -14,33 +40,7 @@ int placement_problem::evaluate_branch(int c1, int c2, std::vector<point> const 
     int area = rect::intersection(fc, sc).get_area();
     if(area <= 0) return -1;
 
-    int dist_x = std::min(fc.xmax-sc.xmin, sc.xmax-fc.xmin);
-    int dist_y = std::min(fc.ymax-sc.ymin, sc.ymax-fc.ymin);
-    assert(dist_x > 0 and dist_y > 0);
-    int height = cells[c1].height + cells[c2].height;
-    int width  = cells[c1].width  + cells[c2].width;
-    if(rule == AREA){
-        return area;
-    }
-    else if(rule == LMIN){
-        return std::min(dist_x, dist_y);
-    }
-    else if(rule == LMAX){
-        return std::max(dist_x, dist_y);
-    }
-    else if(rule == LAVG){
-        return dist_x+dist_y;
-    }
-    else if(rule == WMIN){
-        return std::min(height, width);
-    }
-    else if(rule == WMAX){
-        return std::max(height, width);
-    }
-    else if(rule == WAVG){
-        return height + width;
-    }
-    else if(rule == FIRST_CYCLE){
+    if(rule == FIRST_CYCLE){
         auto rgt = x_flow.try_edge(c2+1, c1+1, -cells[c1].width );
         auto lft = x_flow.try_edge(c1+1, c2+1, -cells[c2].width );
         auto upp = y_flow.try_edge(c2+1, c1+1, -cells[c1].height);
@@ -68,41 +68,16 @@ int placement_problem::evaluate_branch(int c1, int c2, std::vector<point> const 
         return cnt > 0 ? ret / cnt : std::numeric_limits<int>::max();
     }
     else{
-        assert(false);
+        return eval_overlap(fc, sc, rule);
     }
 }
 
 int placement_problem::evaluate_branch(int c1, rect fixed, std::vector<point> const & pos, branching_rule rule) const{
     rect crect(pos[c1].x, pos[c1].y, pos[c1].x+cells[c1].width, pos[c1].y+cells[c1].height);
     int area = rect::intersection(fixed, crect).get_area();
-    int dist_x = std::min(crect.xmax-fixed.xmin, fixed.xmax-crect.xmin);
-    int dist_y = std::min(crect.ymax-fixed.ymin, fixed.ymax-crect.ymin);
     if(area <= 0) return -1;
-    int height = cells[c1].height + fixed.ymax - fixed.ymin;
-    int width  = cells[c1].width  + fixed.xmax - fixed.xmin;
-    if(rule == AREA){
-        return area;
-    }
-    else if(rule == LMIN){
-        return std::min(dist_x, dist_y);
-    }
-    else if(rule == LMAX){
-        return std::max(dist_x, dist_y);
-    }
-    else if(rule == LAVG){
-        return dist_x+dist_y;
-    }
-    else if(rule == WMIN){
-        return std::min(height, width);
-    }
-    else if(rule == WMAX){
-        return std::max(height, width);
-    }
-    else if(rule == WAVG){
-        return height + width;
-    }
 
-    else if(rule == FIRST_CYCLE){
+    if(rule == FIRST_CYCLE){
         auto rgt = x_flow.try_edge(0, c1+1, fixed.xmax-cells[c1].width );
         auto lft = x_flow.try_edge(c1+1, 0, -fixed.xmin);
         auto upp = y_flow.try_edge(0, c1+1, fixed.ymax-cells[c1].height);
@@ -130,7 +105,7 @@ int placement_problem::evaluate_branch(int c1, rect fixed, std::vector<point> co
         return cnt > 0 ? ret / cnt : std::numeric_limits<int>::max();
     }
     else{
-        assert(false);
+        return eval_overlap(fixed, crect, rule);
     }
 }
 
