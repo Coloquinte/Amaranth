@@ -87,6 +87,7 @@ class placement_problem{
     public:
     int cell_count() const{ return cells.size(); }
     int net_count() const{ return nets.size(); }
+    int fixed_count() const{ return fixed_elts.size(); }
 
     bool operator<(placement_problem const & o) const;
 

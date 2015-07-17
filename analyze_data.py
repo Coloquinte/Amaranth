@@ -36,12 +36,11 @@ for line in sys.stdin:
         data.append({
             "cells" : int(tokens[0]),
             "nets"  : int(tokens[1]),
-            "res"   : tokens[2],
-            "time"  : int(tokens[3]),
-            "nodes" : int(tokens[4]),
-            "cost" : int(tokens[5]),
-            #"bprun" : int(tokens[5]),
-            #"fprun" : int(tokens[6]),
+            "fixeds": int(tokens[1]),
+            "res"   : tokens[3],
+            "time"  : int(tokens[4]),
+            "nodes" : int(tokens[5]),
+            "cost" : int(tokens[6]),
         })
 
 if len(data) == 0:

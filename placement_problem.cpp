@@ -349,6 +349,10 @@ placement_problem::placement_problem(rect bounding_box, std::vector<cell> icells
     for(cell const c : cells){
         position_constraints.emplace_back(bounding_box.xmin, bounding_box.ymin, bounding_box.xmax - c.width, bounding_box.ymax - c.height);
     }
+    for(rect const R : fixed){
+        if(rect::intersection(R, bounding_box).get_area() > 0)
+            fixed_elts.emplace_back(rect::intersection(R, bounding_box));
+    }
 
     // The simplest edges: the constraints that a net's upper bound is bigger than a net's lower bound
     std::vector<MCF_graph::edge> basic_x_edges, basic_y_edges;

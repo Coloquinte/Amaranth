@@ -7,7 +7,7 @@
 #include <limits>
 #include <chrono>
 
-const branching_rule rule = WMAX;
+const branching_rule rule = BRULE;
 
 placement_problem input_placement_problem(){
     int bxmn, bymn, bxmx, bymx;
@@ -99,7 +99,7 @@ int main(){
     end = std::chrono::system_clock::now();
 
     int elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
-    std::cout << first_pl.cell_count() << "\t" << first_pl.net_count() << "\t";
+    std::cout << first_pl.cell_count() << "\t" << first_pl.net_count() << "\t" << first_pl.fixed_count() << "\t";
     if(not sols.empty()){
         //std::cout << "Found: " << sols.back().second << " ms";
         if(to_evaluate.empty()) std::cout << "O";
