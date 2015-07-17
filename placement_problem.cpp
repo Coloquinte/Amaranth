@@ -41,16 +41,17 @@ int placement_problem::evaluate_branch(int c1, int c2, std::vector<point> const 
     if(area <= 0) return -1;
 
     if(rule == FIRST_CYCLE){
+        int x_cost = x_flow.get_cost(), y_cost = y_flow.get_cost();
         auto rgt = x_flow.try_edge(c2+1, c1+1, -cells[c1].width );
         auto lft = x_flow.try_edge(c1+1, c2+1, -cells[c2].width );
         auto upp = y_flow.try_edge(c2+1, c1+1, -cells[c1].height);
         auto dow = y_flow.try_edge(c1+1, c2+1, -cells[c2].height);
         int ret = 0, cnt = 0;
-        if(rgt.first){ ++cnt; ret += rgt.second; }
-        if(lft.first){ ++cnt; ret += lft.second; }
-        if(upp.first){ ++cnt; ret += upp.second; }
-        if(dow.first){ ++cnt; ret += dow.second; }
-        return cnt > 0 ? ret / cnt : std::numeric_limits<int>::max();
+        if(rgt.first){ ++cnt; ret += rgt.second + y_cost; }
+        if(lft.first){ ++cnt; ret += lft.second + y_cost; }
+        if(upp.first){ ++cnt; ret += upp.second + x_cost; }
+        if(dow.first){ ++cnt; ret += dow.second + x_cost; }
+        return cnt > 1 ? ret / cnt : std::numeric_limits<int>::max();
     }
     else if(rule == STRONG){
         int x_cost = x_flow.get_cost(), y_cost = y_flow.get_cost();
@@ -65,7 +66,7 @@ int placement_problem::evaluate_branch(int c1, int c2, std::vector<point> const 
         if(lft_x_flow.is_bounded()){ ++cnt; ret += lft_x_flow.get_cost() + y_cost; }
         if(upp_y_flow.is_bounded()){ ++cnt; ret += upp_y_flow.get_cost() + x_cost; }
         if(dow_y_flow.is_bounded()){ ++cnt; ret += dow_y_flow.get_cost() + x_cost; }
-        return cnt > 0 ? ret / cnt : std::numeric_limits<int>::max();
+        return cnt > 1 ? ret / cnt : std::numeric_limits<int>::max();
     }
     else{
         return eval_overlap(fc, sc, rule);
@@ -78,16 +79,17 @@ int placement_problem::evaluate_branch(int c1, rect fixed, std::vector<point> co
     if(area <= 0) return -1;
 
     if(rule == FIRST_CYCLE){
+        int x_cost = x_flow.get_cost(), y_cost = y_flow.get_cost();
         auto rgt = x_flow.try_edge(0, c1+1, fixed.xmax-cells[c1].width );
         auto lft = x_flow.try_edge(c1+1, 0, -fixed.xmin);
         auto upp = y_flow.try_edge(0, c1+1, fixed.ymax-cells[c1].height);
         auto dow = y_flow.try_edge(c1+1, 0, -fixed.ymin);
         int ret = 0, cnt = 0;
-        if(rgt.first){ ++cnt; ret += rgt.second; }
-        if(lft.first){ ++cnt; ret += lft.second; }
-        if(upp.first){ ++cnt; ret += upp.second; }
-        if(dow.first){ ++cnt; ret += dow.second; }
-        return cnt > 0 ? ret / cnt : std::numeric_limits<int>::max();
+        if(rgt.first){ ++cnt; ret += rgt.second + y_cost; }
+        if(lft.first){ ++cnt; ret += lft.second + y_cost; }
+        if(upp.first){ ++cnt; ret += upp.second + x_cost; }
+        if(dow.first){ ++cnt; ret += dow.second + x_cost; }
+        return cnt > 1 ? ret / cnt : std::numeric_limits<int>::max();
     }
     else if(rule == STRONG){
         int x_cost = x_flow.get_cost(), y_cost = y_flow.get_cost();
@@ -102,7 +104,7 @@ int placement_problem::evaluate_branch(int c1, rect fixed, std::vector<point> co
         if(lft_x_flow.is_bounded()){ ++cnt; ret += lft_x_flow.get_cost() + y_cost; }
         if(upp_y_flow.is_bounded()){ ++cnt; ret += upp_y_flow.get_cost() + x_cost; }
         if(dow_y_flow.is_bounded()){ ++cnt; ret += dow_y_flow.get_cost() + x_cost; }
-        return cnt > 0 ? ret / cnt : std::numeric_limits<int>::max();
+        return cnt > 1 ? ret / cnt : std::numeric_limits<int>::max();
     }
     else{
         return eval_overlap(fixed, crect, rule);
