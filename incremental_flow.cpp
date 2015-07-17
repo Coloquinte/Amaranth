@@ -19,12 +19,12 @@ std::vector<MCF_graph::node_elt> MCF_graph::get_Bellman_Ford(int source_node) co
             edge const E = edges[e];
             int forward_cost = accessibles[E.source].cost + E.cost;
             if(forward_cost < accessibles[E.dest].cost){
-                accessibles[E.dest] = node_elt(forward_cost, e);
+                accessibles[E.dest] = node_elt(forward_cost, e, accessibles[E.source].max_flow);
                 found_relaxation = true;
             }
             int backward_cost = accessibles[E.dest].cost - E.cost;
             if(backward_cost < accessibles[E.source].cost and E.flow > 0){
-                accessibles[E.source] = node_elt(backward_cost, e);
+                accessibles[E.source] = node_elt(backward_cost, e, std::min(accessibles[E.dest].max_flow, E.flow));
                 found_relaxation = true;
             }
         }
@@ -37,7 +37,7 @@ std::vector<MCF_graph::node_elt> MCF_graph::get_Bellman_Ford(int source_node) co
     return accessibles;
 }
 
-std::vector<int> MCF_graph::get_potentials() const{
+std::vector<int> const MCF_graph::get_potentials() const{
     if(node_count() == 0) return std::vector<int>();
     std::vector<node_elt> accessibles = get_Bellman_Ford(0);
     std::vector<int> ret;
@@ -60,6 +60,21 @@ void MCF_graph::reorder_edges(){
             std::swap(edges[i], edges[j]);
             ++j;
         }
+    }
+}
+
+std::pair<bool, int> MCF_graph::try_edge(int esource, int edestination, int ecost) const{
+    std::vector<node_elt> accessibles = get_Bellman_Ford(edestination);
+    int path_cost = accessibles[esource].cost + ecost;
+    int max_flow = accessibles[esource].max_flow;
+    if(path_cost < 0){
+        if(max_flow >= max_int) // Infeasible
+            return std::pair<bool, int>(false, get_cost());
+        else
+            return std::pair<bool, int>(true, get_cost() - path_cost * max_flow);
+    }
+    else{
+        return std::pair<bool, int>(true, get_cost());
     }
 }
 
@@ -98,35 +113,27 @@ void MCF_graph::add_edge(int esource, int edestination, int ecost){
             int cycle_cost = path_cost + ecost;
             // std::cout << "Found an improving cycle" << std::endl;
             // Find the maximum flow along the cycle
-            int max_flow = max_int;
-            std::vector<int> pos_edges, neg_edges; // Edges where the flow is sent in the same direction or not
+            int max_flow = accessibles[esource].max_flow;
+            if(max_flow >= max_int){
+                bounded = false;
+                break;
+            }
             int cur_node=esource;
             // TODO: detect negative cost cycles with a single edge in the opposite direction; this edge may be safely removed
             while(cur_node != edestination){
                 int e = accessibles[cur_node].incoming_edge;
                 assert(e >= 0);
                 if(cur_node == edges[e].source){
+                    edges[e].flow -= max_flow;
                     cur_node = edges[e].dest;
-                    neg_edges.push_back(e);
-                    max_flow = std::min(max_flow, edges[e].flow);
                 }else{
                     assert(cur_node == edges[e].dest);
+                    edges[e].flow += max_flow;
                     cur_node = edges[e].source;
-                    pos_edges.push_back(e);
                 }
-            }
-            // Send it
-            if(max_flow >= max_int){
-                bounded = false;
-                //std::cout << "Found a negative-cost cycle with unbounded flow!" << std::endl;
-                break;
             }
             cost -= (max_flow * cycle_cost);
             sent_flow += max_flow;
-            for(int e : pos_edges)
-                edges[e].flow += max_flow;
-            for(int e : neg_edges)
-                edges[e].flow -= max_flow;
         }
         else{ // Ok, no more cycle, optimal solution, we can just exit
             maybe_cycle = false;

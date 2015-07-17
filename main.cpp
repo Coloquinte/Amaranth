@@ -7,6 +7,8 @@
 #include <limits>
 #include <chrono>
 
+const branching_rule rule = WMAX;
+
 placement_problem input_placement_problem(){
     int bxmn, bymn, bxmx, bymx;
     std::cin >> bxmn >> bymn >> bxmx >> bymx;
@@ -81,7 +83,7 @@ int main(){
                 last_sol = std::chrono::system_clock::now();
             }
             else if(cur.is_feasible()){
-                std::vector<placement_problem> nexts = cur.branch();
+                std::vector<placement_problem> nexts = cur.branch(rule);
                 for(auto it = nexts.crbegin(); it != nexts.crend(); ++it)
                     to_evaluate.push(*it);
             }
