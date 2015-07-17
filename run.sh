@@ -5,9 +5,10 @@ resultdir=$2
 
 [ -d ${dataset}/${resultdir} ] || mkdir ${dataset}/${resultdir}
 
-for cells in {8,12,16,20,24}
+for cells in {6..12}
 do
-for rows in {2..8}
+end=$((cells/2))
+for rows in $(seq 1 $end)
 do
 suffix=${cells}c${rows}r
 dirname=${dataset}/data_${suffix}

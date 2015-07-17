@@ -188,7 +188,10 @@ bool placement_problem::is_feasible() const{
 
 // Verify that the pitches for the cells are respected and that the cells do not overlap
 bool placement_problem::is_correct() const{
-    std::vector<point> pos = get_positions();
+    return is_solution_correct(get_positions());
+}
+
+bool placement_problem::is_solution_correct(std::vector<point> const pos) const{
     /*
     for(int i=0; i<cells.size(); ++i){
         if(pos[i].x % cells[i].x_pitch != 0) return false;
@@ -227,12 +230,11 @@ bool placement_problem::is_correct() const{
 int placement_problem::get_cost() const{
     int ret = x_flow.get_cost() + y_flow.get_cost();
     if(is_feasible())
-        assert(get_cost_from_primal() == ret);
+        assert(get_solution_cost(get_positions()) == ret);
     return ret;
 }
 
-int placement_problem::get_cost_from_primal() const{
-    std::vector<point> pos = get_positions();
+int placement_problem::get_solution_cost(std::vector<point> const pos) const{
     int tot_cost=0;
     for(auto const & n : nets){
         if(n.empty()) continue;
