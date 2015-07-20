@@ -48,19 +48,25 @@ if len(data) == 0:
 
 #cell_counts = {cur[cells] for cur in data}
 
-average_explo = get_average([d for d in data if d["res"] == "O" or d["res"] == "I"], "nodes")
-average_time = get_average([d for d in data if d["res"] == "O" or d["res"] == "I"], "time")
+improved_cnt = len([d for d in data if d["res"]=="O" or d["res"] == "U"]) # improved
+optimal_cnt = len([d for d in data if d["res"]=="O" or d["res"] == "I"]) # optimal
+any_cnt = len([d for d in data if d["res"]=="O" or d["res"] == "I" or d["res"] == "U"]) # one of them
+both_cnt = len([d for d in data if d["res"]=="O"]) # all of them
+average_explo = get_average(data, "nodes")
+average_time = get_average(data, "time")
+average_s_explo = get_average([d for d in data if d["res"] == "O" or d["res"] == "I"], "nodes")
+average_s_time = get_average([d for d in data if d["res"] == "O" or d["res"] == "I"], "time")
 
 print(
  len(data)
-,len([d for d in data if d["res"]=="O" or d["res"] == "U"]) # improved
-,len([d for d in data if d["res"]=="O" or d["res"] == "I"]) # optimal
-,len([d for d in data if d["res"]=="O" or d["res"] == "I" or d["res"] == "U"]) # one of them
-,len([d for d in data if d["res"]=="O"]) # all of them
-,get_average(data, "time") # global average time
-,average_time # successful average time
-,get_average(data, "nodes") # global average nodes
-,average_explo # successful average nodes
+,improved_cnt # improved
+,optimal_cnt # optimal
+,any_cnt # one of them
+,both_cnt # all of them
+,average_time # global average time
+,average_s_time # successful average time
+,average_explo # global average nodes
+,average_s_explo # successful average nodes
 )
 
 
