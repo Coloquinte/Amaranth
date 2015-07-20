@@ -48,13 +48,32 @@ if len(data) == 0:
 
 #cell_counts = {cur[cells] for cur in data}
 
-print("Number of problems: ", len(data))
-print("Solved successfully ", len([d for d in data if d["res"]=="O"]))
-print("Average time is: ", get_average(data, "time"))
-print("Average time for successful runs is: ", get_average([d for d in data if d["res"] == "O"], "time"))
-print("Explored " + str(get_average(data, "nodes")) + " nodes on average")
-print("For successful runs, explored " + str(get_average([d for d in data if d["res"] == "O"], "nodes")) + " nodes on average")
-print("Average cost " + str(get_average([ d for d in data if d["res"] != "F"], "cost")) + " on average")
+average_explo = get_average([d for d in data if d["res"] == "O" or d["res"] == "I"], "nodes")
+average_time = get_average([d for d in data if d["res"] == "O" or d["res"] == "I"], "time")
+
+print(
+ len(data)
+,len([d for d in data if d["res"]=="O" or d["res"] == "U"]) # improved
+,len([d for d in data if d["res"]=="O" or d["res"] == "I"]) # optimal
+,len([d for d in data if d["res"]=="O" or d["res"] == "I" or d["res"] == "U"]) # one of them
+,len([d for d in data if d["res"]=="O"]) # all of them
+,get_average(data, "time") # global average time
+,average_time # successful average time
+,get_average(data, "nodes") # global average nodes
+,average_explo # successful average nodes
+)
+
+
+#print("Number of problems: ", len(data))
+#print("Improved or solved to optimality: ", len([d for d in data if d["res"]=="O" or d["res"] == "I" or d["res"] == "U"]))
+#print("Improved: ", len([d for d in data if d["res"]=="O" or d["res"] == "U"]))
+#print("Solved to optimality: ", len([d for d in data if d["res"]=="O" or d["res"] == "I"]))
+#print("Optimal and improved: ", len([d for d in data if d["res"]=="O"]))
+#print("Average time is: ", get_average(data, "time"))
+#print("Average time for successful runs is: ", average_time)
+#print("Explored " + str(get_average(data, "nodes")) + " nodes on average")
+#print("For successful runs, explored " + str(average_explo) + " nodes on average")
+#print("Average cost " + str(get_average([ d for d in data if d["res"] != "F"], "cost")) + " on average")
 
 print_array(get_cumulative(data, "time"),  sys.argv[1]+"/times_"+sys.argv[2])
 print_array(get_cumulative(data, "nodes"), sys.argv[1]+"/nodes_"+sys.argv[2])
