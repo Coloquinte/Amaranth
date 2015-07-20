@@ -208,7 +208,7 @@ bool placement_problem::is_solution_correct(std::vector<point> const pos) const{
     for(rect const R : fixed_elts){
         for(int i=0; i<cells.size(); ++i){
             if(pos[i].x + cells[i].width  > R.xmin
-           and pos[i].y + cells[i].height > R.xmax
+           and pos[i].y + cells[i].height > R.ymin
            and R.xmax  > pos[i].x
            and R.ymax  > pos[i].y) return false;
         }
