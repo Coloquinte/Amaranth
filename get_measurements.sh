@@ -3,7 +3,7 @@
 dataset=$1
 resultdir=$2
 
-for cells in {6..12}
+for cells in {6..16}
 do
 end=$((cells/2))
 for rows in $(seq 1 $end)
