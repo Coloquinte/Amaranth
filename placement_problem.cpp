@@ -308,7 +308,7 @@ std::vector<placement_problem> placement_problem::branch(branching_rule rule) co
         }
     }
 
-    if(found_cell_overlap and (not found_fixed_overlap or best_cell_measure>= best_fixed_measure) ){
+    if(found_cell_overlap and (not found_fixed_overlap or best_cell_measure >= best_fixed_measure) ){
         return branch_overlap_removal(best_fc, best_sc);
     }
     else if(found_fixed_overlap){

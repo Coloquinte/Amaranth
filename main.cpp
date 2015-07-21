@@ -58,7 +58,6 @@ int main(){
     std::vector<point> pos = input_pl.second;
 
     if(not first_pl.is_solution_correct(pos)){
-        exit(0);
         std::cout << "Wrong initial solution" << std::endl;
         std::cerr << "Wrong initial solution" << std::endl;
         abort();
