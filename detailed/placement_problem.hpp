@@ -18,6 +18,8 @@ struct rect{
 
     static rect intersection(rect a, rect b){ return rect(std::max(a.xmin, b.xmin), std::max(a.ymin, b.ymin), std::min(a.xmax, b.xmax), std::min(a.ymax, b.ymax)); }
     int get_area() const { return std::max(0, xmax-xmin) * std::max(0, ymax-ymin); }
+    int get_height () const { return ymax-ymin; };
+    int get_width  () const { return xmax-xmin; };
 };
 
 struct pin : rect{
@@ -35,9 +37,12 @@ enum branching_rule{
     WMIN,
     WMAX,
     WAVG,
-    // Smart rules
-    FIRST_CYCLE,
-    STRONG
+    // Single cycle cost
+    CMIN,
+    CAVG,
+    // Strong branching cost
+    SMIN,
+    SAVG
 };
 
 class placement_problem{
@@ -66,8 +71,6 @@ class placement_problem{
     //bool feasible;
     //bool correct;
 
-    void add_x_constraint(int fc, int sc, int min_dist);
-    void add_y_constraint(int fc, int sc, int min_dist);
     void apply_constraint(generic_constraint constraint);
 
     // Branch with given added constraints, without or with added opposite constraints
@@ -76,6 +79,9 @@ class placement_problem{
     std::vector<placement_problem> branch_overlap_removal(int c1, int c2) const;
     std::vector<placement_problem> branch_overlap_removal(int c1, rect fixed_elt) const;
     std::vector<placement_problem> branch_pitch(int c) const;
+
+    std::vector<int> get_expected_branch(int c1, int c2, int w1, int w2, int h1, int h2) const;
+    std::vector<int> get_strong_branch(int c1, int c2, int w1, int w2, int h1, int h2) const;
 
     int evaluate_branch(int c1, int c2) const;
     int evaluate_branch(int c1, int c2, std::vector<point> const & pos, branching_rule rule = AREA) const;
@@ -87,6 +93,7 @@ class placement_problem{
     public:
     int cell_count() const{ return cells.size(); }
     int net_count() const{ return nets.size(); }
+    int fixed_count() const{ return fixed_elts.size(); }
 
     bool operator<(placement_problem const & o) const;
 
@@ -94,7 +101,8 @@ class placement_problem{
     bool is_correct() const;
     int get_cost() const;
 
-    int get_cost_from_primal() const;
+    int get_solution_cost(std::vector<point> const sol) const;
+    bool is_solution_correct(std::vector<point> const sol) const;
 
     std::vector<point> get_positions() const;
     std::vector<placement_problem> branch(branching_rule rule = AREA) const;

@@ -36,12 +36,11 @@ for line in sys.stdin:
         data.append({
             "cells" : int(tokens[0]),
             "nets"  : int(tokens[1]),
-            "res"   : tokens[2],
-            "time"  : int(tokens[3]),
-            "nodes" : int(tokens[4]),
-            "cost" : int(tokens[5]),
-            #"bprun" : int(tokens[5]),
-            #"fprun" : int(tokens[6]),
+            "fixeds": int(tokens[1]),
+            "res"   : tokens[3],
+            "time"  : int(tokens[4]),
+            "nodes" : int(tokens[5]),
+            "cost" : int(tokens[6]),
         })
 
 if len(data) == 0:
@@ -49,13 +48,38 @@ if len(data) == 0:
 
 #cell_counts = {cur[cells] for cur in data}
 
-print("Number of problems: ", len(data))
-print("Solved successfully ", len([d for d in data if d["res"]=="O"]))
-print("Average time is: ", get_average(data, "time"))
-print("Average time for successful runs is: ", get_average([d for d in data if d["res"] == "O"], "time"))
-print("Explored " + str(get_average(data, "nodes")) + " nodes on average")
-print("For successful runs, explored " + str(get_average([d for d in data if d["res"] == "O"], "nodes")) + " nodes on average")
-print("Average cost " + str(get_average([ d for d in data if d["res"] != "F"], "cost")) + " on average")
+improved_cnt = len([d for d in data if d["res"]=="O" or d["res"] == "U"]) # improved
+optimal_cnt = len([d for d in data if d["res"]=="O" or d["res"] == "I"]) # optimal
+any_cnt = len([d for d in data if d["res"]=="O" or d["res"] == "I" or d["res"] == "U"]) # one of them
+both_cnt = len([d for d in data if d["res"]=="O"]) # all of them
+average_explo = get_average(data, "nodes")
+average_time = get_average(data, "time")
+average_s_explo = get_average([d for d in data if d["res"] == "O" or d["res"] == "I"], "nodes")
+average_s_time = get_average([d for d in data if d["res"] == "O" or d["res"] == "I"], "time")
+
+print(
+ len(data)
+,improved_cnt # improved
+,optimal_cnt # optimal
+,any_cnt # one of them
+,both_cnt # all of them
+,average_time # global average time
+,average_s_time # successful average time
+,average_explo # global average nodes
+,average_s_explo # successful average nodes
+)
+
+
+#print("Number of problems: ", len(data))
+#print("Improved or solved to optimality: ", len([d for d in data if d["res"]=="O" or d["res"] == "I" or d["res"] == "U"]))
+#print("Improved: ", len([d for d in data if d["res"]=="O" or d["res"] == "U"]))
+#print("Solved to optimality: ", len([d for d in data if d["res"]=="O" or d["res"] == "I"]))
+#print("Optimal and improved: ", len([d for d in data if d["res"]=="O"]))
+#print("Average time is: ", get_average(data, "time"))
+#print("Average time for successful runs is: ", average_time)
+#print("Explored " + str(get_average(data, "nodes")) + " nodes on average")
+#print("For successful runs, explored " + str(average_explo) + " nodes on average")
+#print("Average cost " + str(get_average([ d for d in data if d["res"] != "F"], "cost")) + " on average")
 
 print_array(get_cumulative(data, "time"),  sys.argv[1]+"/times_"+sys.argv[2])
 print_array(get_cumulative(data, "nodes"), sys.argv[1]+"/nodes_"+sys.argv[2])

@@ -7,9 +7,9 @@
 #include <limits>
 #include <chrono>
 
-const branching_rule rule = WMAX;
+const branching_rule rule = BRULE;
 
-placement_problem input_placement_problem(){
+std::pair<placement_problem, std::vector<point> > input_placement_problem(){
     int bxmn, bymn, bxmx, bymx;
     std::cin >> bxmn >> bymn >> bxmx >> bymx;
     rect bounding_box(bxmn, bymn, bxmx, bymx);
@@ -43,24 +43,39 @@ placement_problem input_placement_problem(){
             pins.back().emplace_back(ind, rect(xmn, ymn, xmx, ymx));
         }
     }
-    return placement_problem(bounding_box, cells, pins, fixeds);
+    std::vector<point> pos;
+    for(int i=0; i<nb_cells; ++i){
+        int x, y;
+        std::cin >> x >> y;
+        pos.emplace_back(x,y);
+    }
+    return std::pair<placement_problem, std::vector<point> >(placement_problem(bounding_box, cells, pins, fixeds), pos);
 }
 
 int main(){
-    placement_problem first_pl = input_placement_problem();
+    auto input_pl = input_placement_problem();
+    placement_problem first_pl = input_pl.first;
+    std::vector<point> pos = input_pl.second;
+
+    if(not first_pl.is_solution_correct(pos)){
+        std::cout << "Wrong initial solution" << std::endl;
+        std::cerr << "Wrong initial solution" << std::endl;
+        abort();
+    }
+    int initial_cost = first_pl.get_solution_cost(pos);
 
     //std::cout << "Problem with " << first_pl.cell_count() << " cells and " << first_pl.net_count() << " nets " << std::endl;
     std::stack<placement_problem> to_evaluate;
     to_evaluate.push(first_pl);
 
-    const int max_time_ms = 40000;
+    const int max_time_ms = 500;
     std::chrono::time_point<std::chrono::system_clock> start, end, last_sol;
     start = std::chrono::system_clock::now();
     last_sol = std::chrono::system_clock::now();
 
+    int best_correct_cost = initial_cost;
     std::vector<std::pair<int, int> > sols;
 
-    int best_correct_solution = std::numeric_limits<int>::max();
     long long nb_evaluated_nodes = 0, nb_bound_pruned = 0, nb_feasibility_pruned = 0;
     while(not to_evaluate.empty()){
         if(nb_evaluated_nodes % 1000 == 0){
@@ -73,9 +88,9 @@ int main(){
 
         placement_problem cur = to_evaluate.top(); to_evaluate.pop();
         int cur_cost = cur.get_cost();
-        if(cur_cost < best_correct_solution){
+        if(cur_cost < best_correct_cost){
             if(cur.is_correct()){
-                best_correct_solution = cur_cost;
+                best_correct_cost = cur_cost;
                 // std::cout << "Found new correct solution, of cost " << cur_cost << std::endl;
                 std::chrono::time_point<std::chrono::system_clock> cur_time = std::chrono::system_clock::now();
                 int elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(cur_time-start).count();
@@ -99,7 +114,7 @@ int main(){
     end = std::chrono::system_clock::now();
 
     int elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
-    std::cout << first_pl.cell_count() << "\t" << first_pl.net_count() << "\t";
+    std::cout << first_pl.cell_count() << "\t" << first_pl.net_count() << "\t" << first_pl.fixed_count() << "\t";
     if(not sols.empty()){
         //std::cout << "Found: " << sols.back().second << " ms";
         if(to_evaluate.empty()) std::cout << "O";
@@ -109,7 +124,9 @@ int main(){
         if(to_evaluate.empty()) std::cout << "I";
         else std::cout << "F";
     }
-    std::cout << "\t" << elapsed_ms << "\t" << nb_evaluated_nodes << "\t" << best_correct_solution << std::endl; // << "\t" << nb_bound_pruned << "\t" << nb_feasibility_pruned << std::endl;
+    std::cout << "\t" << elapsed_ms << "\t" << nb_evaluated_nodes << "\t" << best_correct_cost << "\t" << initial_cost << std::endl;
+
+// << "\t" << nb_bound_pruned << "\t" << nb_feasibility_pruned << std::endl;
     //std::cout << "Finished, in " << elapsed_ms << " ms, evaluated " << nb_evaluated_nodes << " nodes" << std::endl;
     //std::cout << nb_bound_pruned + nb_feasibility_pruned << " were pruned, " << nb_bound_pruned << " for being suboptimal and " << nb_feasibility_pruned << " for being infeasible" << std::endl;
 

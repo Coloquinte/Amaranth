@@ -3,9 +3,10 @@
 dataset=$1
 resultdir=$2
 
-for cells in {8,12,16,20,24}
+for cells in {6..16}
 do
-for rows in {2..8}
+end=$((cells/2))
+for rows in $(seq 1 $end)
 do
 suffix=${cells}c${rows}r
 dataname=${dataset}/${resultdir}/results_${suffix}
