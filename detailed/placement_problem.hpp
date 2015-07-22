@@ -104,6 +104,8 @@ class placement_problem{
     int get_solution_cost(std::vector<point> const sol) const;
     bool is_solution_correct(std::vector<point> const sol) const;
 
+    void print() const;
+
     std::vector<point> get_positions() const;
     std::vector<placement_problem> branch(branching_rule rule = AREA) const;
 

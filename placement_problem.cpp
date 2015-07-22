@@ -122,13 +122,13 @@ void placement_problem::apply_constraint(generic_constraint constraint){
     assert(constraint.fc < cell_count() and constraint.sc < cell_count());
     assert(constraint.fc >= -1 and constraint.sc >= -1);
     if(constraint.direction){
-        if(constraint.fc >= 0 and constraint.sc >= 0)
-            y_constraints.push_back(constraint);
+        //if(constraint.fc >= 0 and constraint.sc >= 0)
+        y_constraints.push_back(constraint);
         y_flow.add_edge(constraint.sc+1, constraint.fc+1, -constraint.min_dist);
     }
     else{
-        if(constraint.fc >= 0 and constraint.sc >= 0)
-            x_constraints.push_back(constraint);
+        //if(constraint.fc >= 0 and constraint.sc >= 0)
+        x_constraints.push_back(constraint);
         x_flow.add_edge(constraint.sc+1, constraint.fc+1, -constraint.min_dist);
     }
 }
@@ -264,6 +264,9 @@ int placement_problem::get_solution_cost(std::vector<point> const pos) const{
 
 std::vector<point> placement_problem::get_positions() const{
     std::vector<int> x_pos = x_flow.get_potentials(), y_pos = y_flow.get_potentials();
+    for(int x : x_pos) assert(x < std::numeric_limits<int>::max() / 2);
+    for(int y : y_pos) assert(y < std::numeric_limits<int>::max() / 2);
+
     // Use the potentials of the cells - the potential of the fixed node
     std::vector<point> ret;
     for(int i=0; i<cell_count(); ++i){
@@ -380,5 +383,16 @@ placement_problem::placement_problem(rect bounding_box, std::vector<cell> icells
 
     //x_flow.print();
     //y_flow.print();
+}
+
+void placement_problem::print() const{
+    std::cout << "X constraints" << std::endl;
+    for(auto co : x_constraints){
+        std::cerr << co.fc << " + " << co.min_dist << " <= " << co.sc << std::endl;
+    }
+    std::cout << "Y constraints" << std::endl;
+    for(auto co : y_constraints){
+        std::cerr << co.fc << " + " << co.min_dist << " <= " << co.sc << std::endl;
+    }
 }
 
