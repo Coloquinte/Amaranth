@@ -40,6 +40,7 @@ std::vector<MCF_graph::node_elt> MCF_graph::get_Bellman_Ford(int source_node) co
 std::vector<int> const MCF_graph::get_potentials() const{
     if(node_count() == 0) return std::vector<int>();
     std::vector<node_elt> accessibles = get_Bellman_Ford(0);
+    assert(accessibles[0].cost == 0);
     std::vector<int> ret;
     for(node_elt const N : accessibles) ret.push_back(N.cost);
     return ret;
@@ -87,7 +88,7 @@ void MCF_graph::add_edge(int esource, int edestination, int ecost){
         if(it->source == esource and it->dest == edestination){
             if(it->cost > ecost){
                 sent_flow += it->flow;
-                cost -= it->flow * (it->cost - ecost);
+                cost -= it->flow * (ecost - it->cost);
                 it = edges.erase(it);
             }
             else{
@@ -141,8 +142,9 @@ void MCF_graph::add_edge(int esource, int edestination, int ecost){
     }
  
     edges.emplace_back(esource, edestination, ecost, sent_flow);
-    reorder_edges();
+    //reorder_edges();
     assert(not bounded or check_optimal());
+    selfcheck();
 }
 
 MCF_graph::MCF_graph(int node_cnt, std::vector<MCF_graph::edge> edge_list) : edges(edge_list), nb_nodes(node_cnt), bounded(true), cost(0){
@@ -158,4 +160,14 @@ void MCF_graph::print() const{
         std::cout << E.source << " " << E.dest << ": " << E.cost << " ; flow " << E.flow << std::endl;
     }
 }
+
+void MCF_graph::selfcheck() const{
+    int tot_cost = 0;
+    for(edge const E : edges){
+        tot_cost -= E.cost * E.flow;
+    }
+    assert(tot_cost == get_cost());
+}
+
+
 

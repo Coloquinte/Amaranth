@@ -47,6 +47,8 @@ class MCF_graph{
     // Add a new edge and get a new optimal flow and potentials for the node; uses Dijkstra instead of Bellman-Ford
     void add_edge(int source, int dest, int cost);
 
+    void selfcheck() const;
+
     std::vector<int> const get_potentials() const;
     int get_cost() const{ return cost; }
     bool is_bounded() const{ return bounded; }
