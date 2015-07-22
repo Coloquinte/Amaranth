@@ -98,8 +98,8 @@ int placement_problem::evaluate_branch(int c1, rect fixed, std::vector<point> co
     or rule == SMIN or rule == SAVG){
         std::vector<int> res = 
             (rule == CMIN or rule == CAVG) ?
-            get_expected_branch (c1, -1, cells[c1].width-fixed.xmax, fixed.xmin, cells[c1].height-fixed.ymax, fixed.ymin)
-          : get_strong_branch   (c1, -1, cells[c1].width-fixed.xmax, fixed.xmin, cells[c1].height-fixed.ymax, fixed.ymin);
+            get_expected_branch (c1, -1, cells[c1].width-fixed.xmin, fixed.xmax, cells[c1].height-fixed.ymin, fixed.ymax)
+          : get_strong_branch   (c1, -1, cells[c1].width-fixed.xmin, fixed.xmax, cells[c1].height-fixed.ymin, fixed.ymax);
         if(res.size() <= 1) return std::numeric_limits<int>::max();
         if(rule == SMIN or rule == CMIN) return *std::min_element(res.begin(), res.end());
         else{
@@ -174,10 +174,10 @@ std::vector<placement_problem> placement_problem::branch_overlap_removal(int c1,
 
     // A constraint satisfied in the branch, and another one to constrain the other sides further
     std::vector<generic_constraint> constraints({
-        generic_constraint(false, c1, -1, cells[c1].width  - fixed.xmax),
-        generic_constraint(false, -1, c1, fixed.xmin                   ),
-        generic_constraint(true , c1, -1, cells[c1].height - fixed.ymax),
-        generic_constraint(true , -1, c1, fixed.ymin                   )
+        generic_constraint(false, c1, -1, cells[c1].width  - fixed.xmin),
+        generic_constraint(false, -1, c1, fixed.xmax                   ),
+        generic_constraint(true , c1, -1, cells[c1].height - fixed.ymin),
+        generic_constraint(true , -1, c1, fixed.ymax                   )
     });
     return branch_on_constraints(constraints);
 }
