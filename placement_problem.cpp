@@ -33,35 +33,56 @@ int eval_overlap(rect r1, rect r2, branching_rule rule){
     }
 }
 
-std::vector<int> placement_problem::get_expected_branch(int c1, int c2, int w1, int w2, int h1, int h2) const{
-    auto rgt = x_flow.try_edge(c2+1, c1+1, -w1);
-    auto lft = x_flow.try_edge(c1+1, c2+1, -w2);
-    auto upp = y_flow.try_edge(c2+1, c1+1, -h1);
-    auto dow = y_flow.try_edge(c1+1, c2+1, -h2);
+std::vector<int> placement_problem::evaluate_branches_strong(std::vector<generic_constraint> constraints) const{
     std::vector<int> ret;
-    int x_cost = x_flow.get_cost(), y_cost = y_flow.get_cost();
-    if(rgt.first){ ret.push_back(rgt.second + y_cost); }
-    if(lft.first){ ret.push_back(lft.second + y_cost); }
-    if(upp.first){ ret.push_back(upp.second + x_cost); }
-    if(dow.first){ ret.push_back(dow.second + x_cost); }
+    for(generic_constraint constraint : constraints){
+        if(constraint.direction){
+            auto tmp_flow = y_flow;
+            tmp_flow.add_edge(constraint.sc+1, constraint.fc+1, -constraint.min_dist);
+            if(tmp_flow.is_bounded()) ret.push_back(x_flow.get_cost() + tmp_flow.get_cost());
+        }
+        else{
+            auto tmp_flow = x_flow;
+            tmp_flow.add_edge(constraint.sc+1, constraint.fc+1, -constraint.min_dist);
+            if(tmp_flow.is_bounded()) ret.push_back(y_flow.get_cost() + tmp_flow.get_cost());
+        }
+    }
     return ret;
 }
 
-std::vector<int> placement_problem::get_strong_branch(int c1, int c2, int w1, int w2, int h1, int h2) const{
-    MCF_graph rgt_x_flow = x_flow, lft_x_flow = x_flow;
-    MCF_graph upp_y_flow = y_flow, dow_y_flow = y_flow;
-    rgt_x_flow.add_edge(c2+1, c1+1, -w1);
-    lft_x_flow.add_edge(c1+1, c2+1, -w2);
-    upp_y_flow.add_edge(c2+1, c1+1, -h1);
-    dow_y_flow.add_edge(c1+1, c2+1, -h2);
+
+std::vector<int> placement_problem::evaluate_branches_expected(std::vector<generic_constraint> constraints) const{
     std::vector<int> ret;
-    int x_cost = x_flow.get_cost(), y_cost = y_flow.get_cost();
-    if(rgt_x_flow.is_bounded()){ ret.push_back(rgt_x_flow.get_cost() + y_cost); }
-    if(lft_x_flow.is_bounded()){ ret.push_back(lft_x_flow.get_cost() + y_cost); }
-    if(upp_y_flow.is_bounded()){ ret.push_back(upp_y_flow.get_cost() + x_cost); }
-    if(dow_y_flow.is_bounded()){ ret.push_back(dow_y_flow.get_cost() + x_cost); }
+    for(generic_constraint constraint : constraints){
+        if(constraint.direction){
+            auto cur = y_flow.try_edge(constraint.sc+1, constraint.fc+1, -constraint.min_dist);
+            if(cur.first) ret.push_back(x_flow.get_cost() + cur.second);
+        }
+        else{
+            auto cur = x_flow.try_edge(constraint.sc+1, constraint.fc+1, -constraint.min_dist);
+            if(cur.first) ret.push_back(y_flow.get_cost() + cur.second);
+        }
+    }
     return ret;
-} 
+}
+
+std::vector<placement_problem::generic_constraint> placement_problem::get_branching_constraints(int c1, int c2) const{
+    return std::vector<generic_constraint>({
+        generic_constraint(false, c1, c2, cells[c1].width ),
+        generic_constraint(false, c2, c1, cells[c2].width ),
+        generic_constraint(true , c1, c2, cells[c1].height),
+        generic_constraint(true , c2, c1, cells[c2].height)
+    });
+}
+
+std::vector<placement_problem::generic_constraint> placement_problem::get_branching_constraints(int c1, rect fixed) const{
+    return std::vector<generic_constraint>({
+        generic_constraint(false, c1, -1, cells[c1].width  - fixed.xmin),
+        generic_constraint(false, -1, c1, fixed.xmax                   ),
+        generic_constraint(true , c1, -1, cells[c1].height - fixed.ymin),
+        generic_constraint(true , -1, c1, fixed.ymax                   )
+    });
+}
 
 int placement_problem::evaluate_branch(int c1, int c2, std::vector<point> const & pos, branching_rule rule) const{
 
@@ -72,10 +93,11 @@ int placement_problem::evaluate_branch(int c1, int c2, std::vector<point> const 
 
     if(rule == CMIN or rule == CAVG
     or rule == SMIN or rule == SAVG){
+        auto constraints = get_branching_constraints(c1, c2);
         std::vector<int> res = 
             (rule == CMIN or rule == CAVG) ?
-            get_expected_branch (c1, c2, cells[c1].width, cells[c2].width, cells[c1].height, cells[c2].height)
-          : get_strong_branch   (c1, c2, cells[c1].width, cells[c2].width, cells[c1].height, cells[c2].height);
+            evaluate_branches_expected(constraints)
+          : evaluate_branches_strong(constraints);
         if(res.size() <= 1) return std::numeric_limits<int>::max();
         if(rule == SMIN or rule == CMIN) return *std::min_element(res.begin(), res.end());
         else{
@@ -96,10 +118,11 @@ int placement_problem::evaluate_branch(int c1, rect fixed, std::vector<point> co
 
     if(rule == CMIN or rule == CAVG
     or rule == SMIN or rule == SAVG){
+        auto constraints = get_branching_constraints(c1, fixed);
         std::vector<int> res = 
             (rule == CMIN or rule == CAVG) ?
-            get_expected_branch (c1, -1, cells[c1].width-fixed.xmin, fixed.xmax, cells[c1].height-fixed.ymin, fixed.ymax)
-          : get_strong_branch   (c1, -1, cells[c1].width-fixed.xmin, fixed.xmax, cells[c1].height-fixed.ymin, fixed.ymax);
+            evaluate_branches_expected(constraints)
+          : evaluate_branches_strong(constraints);
         if(res.size() <= 1) return std::numeric_limits<int>::max();
         if(rule == SMIN or rule == CMIN) return *std::min_element(res.begin(), res.end());
         else{
@@ -159,26 +182,12 @@ std::vector<placement_problem> placement_problem::branch_on_constraints(std::vec
 
 
 std::vector<placement_problem> placement_problem::branch_overlap_removal(int c1, int c2) const{
-
-    // A constraint satisfied in the branch, and another one to constrain the other sides further
-    std::vector<generic_constraint> constraints({
-        generic_constraint(false, c1, c2, cells[c1].width ),
-        generic_constraint(false, c2, c1, cells[c2].width ),
-        generic_constraint(true , c1, c2, cells[c1].height),
-        generic_constraint(true , c2, c1, cells[c2].height)
-    });
+    auto constraints = get_branching_constraints(c1, c2);
     return branch_on_constraints(constraints);
 }
 
 std::vector<placement_problem> placement_problem::branch_overlap_removal(int c1, rect fixed) const{
-
-    // A constraint satisfied in the branch, and another one to constrain the other sides further
-    std::vector<generic_constraint> constraints({
-        generic_constraint(false, c1, -1, cells[c1].width  - fixed.xmin),
-        generic_constraint(false, -1, c1, fixed.xmax                   ),
-        generic_constraint(true , c1, -1, cells[c1].height - fixed.ymin),
-        generic_constraint(true , -1, c1, fixed.ymax                   )
-    });
+    auto constraints = get_branching_constraints(c1, fixed);
     return branch_on_constraints(constraints);
 }
 

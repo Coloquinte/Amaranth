@@ -80,10 +80,11 @@ class placement_problem{
     std::vector<placement_problem> branch_overlap_removal(int c1, rect fixed_elt) const;
     std::vector<placement_problem> branch_pitch(int c) const;
 
-    std::vector<int> get_expected_branch(int c1, int c2, int w1, int w2, int h1, int h2) const;
-    std::vector<int> get_strong_branch(int c1, int c2, int w1, int w2, int h1, int h2) const;
+    std::vector<generic_constraint> get_branching_constraints(int c1, int c2) const;
+    std::vector<generic_constraint> get_branching_constraints(int c1, rect fixed) const;
+    std::vector<int> evaluate_branches_expected(std::vector<generic_constraint> constraints) const;
+    std::vector<int> evaluate_branches_strong(std::vector<generic_constraint> constraints) const;
 
-    int evaluate_branch(int c1, int c2) const;
     int evaluate_branch(int c1, int c2, std::vector<point> const & pos, branching_rule rule = AREA) const;
     int evaluate_branch(int c1, rect fixed, std::vector<point> const & pos, branching_rule rule = AREA) const;
     int evaluate_branch(int c) const;
